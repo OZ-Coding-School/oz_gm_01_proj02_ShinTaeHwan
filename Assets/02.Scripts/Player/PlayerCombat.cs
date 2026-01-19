@@ -4,7 +4,7 @@ using MiniExtractionShooter.Weapon;
 namespace MiniExtractionShooter.Player
 {
     /// <summary>
-    /// 플레이어 전투 시스템 (사격, 재장전)
+    /// 플레이어 전투 시스템 (사격, 재장전, 조준)
     /// </summary>
     public class PlayerCombat : MonoBehaviour
     {
@@ -13,6 +13,7 @@ namespace MiniExtractionShooter.Player
         [Header("References")]
         [SerializeField] private Transform firePoint;
         [SerializeField] private WeaponManager weaponManager;
+        [SerializeField] private AimingSystem aimingSystem;
 
         [Header("State")]
         [SerializeField] private bool canShoot = true;
@@ -20,6 +21,8 @@ namespace MiniExtractionShooter.Player
         // Events
         public event System.Action OnFireAttempt;
         public event System.Action OnReloadAttempt;
+        public event System.Action OnADSStart;
+        public event System.Action OnADSEnd;
 
         private void Awake()
         {
@@ -40,6 +43,15 @@ namespace MiniExtractionShooter.Player
             {
                 weaponManager = GetComponent<WeaponManager>();
             }
+
+            if (aimingSystem == null)
+            {
+                aimingSystem = GetComponent<AimingSystem>();
+                if (aimingSystem == null)
+                {
+                    aimingSystem = AimingSystem.Instance;
+                }
+            }
         }
 
         private void Update()
@@ -47,6 +59,7 @@ namespace MiniExtractionShooter.Player
             if (!canShoot) return;
 
             HandleFireInput();
+            HandleADSInput();
             HandleReloadInput();
             HandleWeaponSwitch();
         }
@@ -58,6 +71,23 @@ namespace MiniExtractionShooter.Player
             {
                 OnFireAttempt?.Invoke();
                 weaponManager?.Fire();
+            }
+        }
+
+        private void HandleADSInput()
+        {
+            // 우클릭 누름 - ADS 시작
+            if (Input.GetMouseButtonDown(1))
+            {
+                aimingSystem?.StartADS();
+                OnADSStart?.Invoke();
+            }
+
+            // 우클릭 뗌 - ADS 해제
+            if (Input.GetMouseButtonUp(1))
+            {
+                aimingSystem?.StopADS();
+                OnADSEnd?.Invoke();
             }
         }
 

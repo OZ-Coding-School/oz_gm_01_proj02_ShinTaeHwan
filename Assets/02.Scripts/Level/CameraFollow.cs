@@ -1,9 +1,10 @@
 using UnityEngine;
+using MiniExtractionShooter.Player;
 
 namespace MiniExtractionShooter.Level
 {
     /// <summary>
-    /// Top-Down 카메라 팔로우
+    /// Top-Down 카메라 팔로우 (마우스 오프셋 지원)
     /// </summary>
     public class CameraFollow : MonoBehaviour
     {
@@ -12,6 +13,12 @@ namespace MiniExtractionShooter.Level
 
         [Header("Offset")]
         [SerializeField] private Vector3 offset = new Vector3(0, 15, -10);
+
+        [Header("Mouse Offset")]
+        [SerializeField] private bool useMouseOffset = true;
+        [SerializeField] private float maxMouseOffset = 3f;
+        [SerializeField] private float mouseOffsetSmooth = 5f;
+        [SerializeField] [Range(0f, 1f)] private float mouseInfluence = 0.3f;
 
         [Header("Smoothing")]
         [SerializeField] private float smoothSpeed = 5f;
@@ -29,9 +36,17 @@ namespace MiniExtractionShooter.Level
 
         private Vector3 velocity = Vector3.zero;
         private float currentShakeDuration = 0f;
+        private Vector3 currentMouseOffset = Vector3.zero;
+        private Camera cam;
 
         private void Start()
         {
+            cam = GetComponent<Camera>();
+            if (cam == null)
+            {
+                cam = Camera.main;
+            }
+
             // 타겟이 없으면 플레이어 찾기
             if (target == null)
             {
@@ -53,7 +68,16 @@ namespace MiniExtractionShooter.Level
         {
             if (target == null) return;
 
-            Vector3 desiredPosition = target.position + offset;
+            // 마우스 오프셋 계산 및 적용
+            Vector3 targetMouseOffset = CalculateMouseOffset();
+            currentMouseOffset = Vector3.Lerp(
+                currentMouseOffset,
+                targetMouseOffset,
+                mouseOffsetSmooth * Time.deltaTime
+            );
+
+            // 최종 위치 = 타겟 + 기본 오프셋 + 마우스 오프셋
+            Vector3 desiredPosition = target.position + offset + currentMouseOffset;
 
             // 경계 제한
             desiredPosition = ClampPosition(desiredPosition);
@@ -79,6 +103,46 @@ namespace MiniExtractionShooter.Level
 
             // 화면 흔들림 적용
             ApplyShake();
+        }
+
+        /// <summary>
+        /// 마우스 위치 기반 오프셋 계산
+        /// </summary>
+        private Vector3 CalculateMouseOffset()
+        {
+            if (!useMouseOffset || target == null || cam == null)
+                return Vector3.zero;
+
+            // PlayerController에서 마우스 월드 위치 가져오기
+            Vector3 mouseWorldPos;
+            if (PlayerController.Instance != null)
+            {
+                mouseWorldPos = PlayerController.Instance.CurrentAimPoint;
+            }
+            else
+            {
+                // 폴백: 직접 계산
+                Plane groundPlane = new Plane(Vector3.up, target.position);
+                Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+
+                if (groundPlane.Raycast(ray, out float distance))
+                {
+                    mouseWorldPos = ray.GetPoint(distance);
+                }
+                else
+                {
+                    return Vector3.zero;
+                }
+            }
+
+            // 플레이어에서 마우스 방향 계산
+            Vector3 directionToMouse = mouseWorldPos - target.position;
+            directionToMouse.y = 0; // XZ 평면에서만
+
+            // 오프셋 계산 (최대치 제한)
+            Vector3 mouseOffset = Vector3.ClampMagnitude(directionToMouse * mouseInfluence, maxMouseOffset);
+
+            return mouseOffset;
         }
 
         /// <summary>
@@ -142,6 +206,18 @@ namespace MiniExtractionShooter.Level
         public void SetOffset(Vector3 newOffset)
         {
             offset = newOffset;
+        }
+
+        /// <summary>
+        /// 마우스 오프셋 활성화/비활성화
+        /// </summary>
+        public void SetMouseOffsetEnabled(bool enabled)
+        {
+            useMouseOffset = enabled;
+            if (!enabled)
+            {
+                currentMouseOffset = Vector3.zero;
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using MiniExtractionShooter.UI.Inventory;
 
 namespace MiniExtractionShooter.Player
 {
@@ -31,7 +32,12 @@ namespace MiniExtractionShooter.Player
 
         // 방어구에 의한 이동 속도 감소
         private float armorSpeedReduction = 0f;
+        // 무기에 의한 이동 속도 계수
+        private float weaponSpeedModifier = 1f;
         private Camera mainCamera;
+
+        // 현재 마우스가 가리키는 월드 위치
+        private Vector3 currentAimPoint;
 
         // Events
         public System.Action<bool> OnMovementStateChanged;
@@ -41,6 +47,7 @@ namespace MiniExtractionShooter.Player
         public bool IsRunning => isRunning && IsMoving;
         public float CurrentSpeed => IsRunning ? runSpeed : walkSpeed;
         public Vector3 MoveDirection => moveDirection;
+        public Vector3 CurrentAimPoint => currentAimPoint;
 
         private void Awake()
         {
@@ -76,6 +83,15 @@ namespace MiniExtractionShooter.Player
             {
                 HandleAiming();
             }
+
+            // Tab 또는 I 키로 인벤토리 열기
+            if (Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.I))
+            {
+                if (InventoryUI.Instance != null)
+                {
+                    InventoryUI.Instance.ToggleInventory();
+                }
+            }
         }
 
         private void HandleMovementInput()
@@ -101,9 +117,10 @@ namespace MiniExtractionShooter.Player
             }
             velocity.y += gravity * Time.deltaTime;
 
-            // 이동 속도 계산 (방어구 감소 적용)
+            // 이동 속도 계산 (방어구 감소 + 무기 계수 적용)
             float currentSpeed = IsRunning ? runSpeed : walkSpeed;
             currentSpeed *= (1f - armorSpeedReduction);
+            currentSpeed *= weaponSpeedModifier; // 무기/ADS 속도 계수 적용
 
             // 이동 적용
             Vector3 move = moveDirection * currentSpeed * Time.deltaTime;
@@ -128,6 +145,8 @@ namespace MiniExtractionShooter.Player
             if (groundPlane.Raycast(ray, out float distance))
             {
                 Vector3 targetPosition = ray.GetPoint(distance);
+                currentAimPoint = targetPosition; // 마우스 월드 위치 저장
+
                 Vector3 direction = (targetPosition - transform.position).normalized;
 
                 if (direction.magnitude > 0.1f)
@@ -145,6 +164,7 @@ namespace MiniExtractionShooter.Player
         /// </summary>
         public void SetCanMove(bool value)
         {
+            Debug.Log($"[PlayerController] SetCanMove called: {value}");
             canMove = value;
             if (!canMove)
             {
@@ -166,6 +186,14 @@ namespace MiniExtractionShooter.Player
         public void SetArmorSpeedReduction(float reduction)
         {
             armorSpeedReduction = Mathf.Clamp01(reduction);
+        }
+
+        /// <summary>
+        /// 무기에 의한 속도 계수 설정 (무기 무게, ADS 등)
+        /// </summary>
+        public void SetWeaponSpeedModifier(float modifier)
+        {
+            weaponSpeedModifier = Mathf.Clamp(modifier, 0.1f, 1f);
         }
 
         /// <summary>

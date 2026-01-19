@@ -12,22 +12,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7abd308fca3b4950aa19fc4c8ae4e16, type: 3}
   m_Name: Pistol
   m_EditorClassIdentifier: 
-  weaponName: Pistol
+  itemName: New Item
+  itemType: 0
+  icon: {fileID: 0}
+  isStackable: 0
+  maxStackSize: 1
+  description: 
   weaponType: 0
   ammoType: 0
-  weaponIcon: {fileID: 0}
-  weaponPrefab: {fileID: 0}
-  baseDamage: 20
-  fireRate: 0.2
-  magazineSize: 12
-  reloadTime: 1.5
-  verticalRecoil: 2
-  horizontalRecoil: 1
+  weaponPrefab: {fileID: 1694449805434718, guid: 6f1a7354265853f44b0ed5e2e43676ad,
+    type: 3}
+  weight: 2
+  caliber: 9mm
+  baseDamage: 28.5
+  critMultiplier: 1.6
+  fireRate: 2.5
+  magazineSize: 7
+  reloadTime: 3
+  muzzleVelocity: 93
+  effectiveRange: 25.2
+  maxRange: 50
+  hipFireSpread: 16.6
+  adsSpread: 10.14
+  spreadRecovery: 15
+  verticalRecoil: 113.5
+  horizontalRecoil: 94
   recoilRecovery: 10
-  effectiveRange: 15
-  maxRange: 30
+  adsTime: 0.65
+  adsMoveModifier: 0.55
+  moveSpeedModifier: 0.92
+  soundRange: 32.4
+  explosionDamageMultiplier: 1
   fireSound: {fileID: 0}
   reloadSound: {fileID: 0}
   emptySound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}
-  bulletTrailPrefab: {fileID: 0}
+  bulletTrailPrefab: {fileID: 509282136741994303, guid: 98bc08b9a07f24a07832d7b8fb4d1226,
+    type: 3}
