@@ -18,8 +18,8 @@ MonoBehaviour:
   isStackable: 0
   maxStackSize: 1
   description: "AK47\uC774\uB2E4"
-  weaponType: 1
-  ammoType: 1
+  weaponType: 0
+  ammoType: 0
   weaponPrefab: {fileID: 699984860642453494, guid: 1112cbe0022cf4b2e8c3d59e9d95143a,
     type: 3}
   weight: 4.3

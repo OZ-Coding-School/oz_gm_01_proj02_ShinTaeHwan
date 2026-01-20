@@ -92,6 +92,19 @@ namespace MiniExtractionShooter.Player
                     InventoryUI.Instance.ToggleInventory();
                 }
             }
+
+            // 무기 교체 (1, 2 키)
+            if (canMove) // UI가 열려있지 않을 때만
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1))
+                {
+                    Weapon.WeaponManager.Instance?.SwitchToWeapon(0);
+                }
+                else if (Input.GetKeyDown(KeyCode.Alpha2))
+                {
+                    Weapon.WeaponManager.Instance?.SwitchToWeapon(1);
+                }
+            }
         }
 
         private void HandleMovementInput()
@@ -105,7 +118,17 @@ namespace MiniExtractionShooter.Player
 
         private void HandleRunInput()
         {
-            isRunning = Input.GetKey(KeyCode.LeftShift);
+            // 달리기 입력 + 스태미나 체크
+            bool wantsToRun = Input.GetKey(KeyCode.LeftShift);
+            
+            if (wantsToRun && PlayerStamina.Instance != null)
+            {
+                isRunning = PlayerStamina.Instance.CanRun();
+            }
+            else
+            {
+                isRunning = wantsToRun;
+            }
         }
 
         private void ApplyMovement()
@@ -116,6 +139,16 @@ namespace MiniExtractionShooter.Player
                 velocity.y = -2f;
             }
             velocity.y += gravity * Time.deltaTime;
+
+            // 달리기 중이면 스태미나 소모
+            if (IsRunning && IsMoving && PlayerStamina.Instance != null)
+            {
+                if (!PlayerStamina.Instance.ConsumeRunStamina())
+                {
+                    // 스태미나 부족 - 달리기 중단
+                    isRunning = false;
+                }
+            }
 
             // 이동 속도 계산 (방어구 감소 + 무기 계수 적용)
             float currentSpeed = IsRunning ? runSpeed : walkSpeed;

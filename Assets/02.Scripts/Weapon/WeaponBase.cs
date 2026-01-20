@@ -35,11 +35,16 @@ namespace MiniExtractionShooter.Weapon
         public event System.Action OnFired;
         public event System.Action OnReloadStart;
         public event System.Action OnReloadComplete;
+        public event System.Action OnReloadCancelled;
         public event System.Action<int, int> OnAmmoChanged; // magazine, total reserve
+        public event System.Action<float> OnReloadProgress; // 0-1 progress
+
+        private Coroutine reloadCoroutine;
 
         public WeaponData Data => weaponData;
         public int MagazineAmmo => magazineAmmo;
         public int CurrentAmmo => magazineAmmo;  // 하위 호환용
+        public int MagazineSize => weaponData?.magazineSize ?? 0; // HUD용
         public bool IsReloading => isReloading;
         public bool CanFire => !isReloading && magazineAmmo > 0 && Time.time >= nextFireTime;
 
@@ -91,8 +96,16 @@ namespace MiniExtractionShooter.Weapon
         /// </summary>
         public void SetWeaponData(WeaponData data)
         {
+            SetWeaponData(data, data.magazineSize);
+        }
+
+        /// <summary>
+        /// 무기 데이터 설정 (탄창 수 지정)
+        /// </summary>
+        public void SetWeaponData(WeaponData data, int currentAmmo)
+        {
             weaponData = data;
-            magazineAmmo = data.magazineSize;
+            magazineAmmo = Mathf.Clamp(currentAmmo, 0, data.magazineSize);
             isReloading = false;
             consecutiveShots = 0;
 
@@ -255,8 +268,26 @@ namespace MiniExtractionShooter.Weapon
                 if (availableAmmo <= 0) return false;
             }
 
-            StartCoroutine(ReloadCoroutine());
+            reloadCoroutine = StartCoroutine(ReloadCoroutine());
             return true;
+        }
+
+        /// <summary>
+        /// 재장전 취소
+        /// </summary>
+        public void CancelReload()
+        {
+            if (!isReloading) return;
+
+            if (reloadCoroutine != null)
+            {
+                StopCoroutine(reloadCoroutine);
+                reloadCoroutine = null;
+            }
+
+            isReloading = false;
+            OnReloadCancelled?.Invoke();
+            OnReloadProgress?.Invoke(0f);
         }
 
         /// <summary>
@@ -273,7 +304,17 @@ namespace MiniExtractionShooter.Weapon
                 AudioSource.PlayClipAtPoint(weaponData.reloadSound, transform.position);
             }
 
-            yield return new WaitForSeconds(weaponData.reloadTime);
+            float reloadTime = weaponData.reloadTime;
+            float elapsedTime = 0f;
+
+            // 재장전 진행률 업데이트
+            while (elapsedTime < reloadTime)
+            {
+                elapsedTime += Time.deltaTime;
+                float progress = Mathf.Clamp01(elapsedTime / reloadTime);
+                OnReloadProgress?.Invoke(progress);
+                yield return null;
+            }
 
             // 필요한 탄약 계산
             int neededAmmo = weaponData.magazineSize - magazineAmmo;
@@ -295,8 +336,10 @@ namespace MiniExtractionShooter.Weapon
             }
 
             isReloading = false;
+            reloadCoroutine = null;
             consecutiveShots = 0;
 
+            OnReloadProgress?.Invoke(0f);
             OnReloadComplete?.Invoke();
             NotifyAmmoChanged();
         }

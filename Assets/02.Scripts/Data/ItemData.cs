@@ -3,6 +3,18 @@ using UnityEngine;
 namespace MiniExtractionShooter.Data
 {
     /// <summary>
+    /// 아이템 타입 열거형
+    /// </summary>
+    public enum ItemType
+    {
+        Weapon,
+        Ammo,
+        Armor,
+        Health,
+        Valuable
+    }
+
+    /// <summary>
     /// 모든 아이템의 기본 ScriptableObject
     /// WeaponData, ArmorData, AmmoData가 이 클래스를 상속
     /// </summary>

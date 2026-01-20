@@ -45,26 +45,32 @@ namespace MiniExtractionShooter.UI.Inventory
             if (currentItem != null)
             {
                 // Icon
-                if (currentItem.Icon != null)
+                if (iconImage != null)
                 {
-                    iconImage.sprite = currentItem.Icon;
-                    iconImage.color = Color.white;
-                    iconImage.gameObject.SetActive(true);
-                }
-                else
-                {
-                    iconImage.gameObject.SetActive(false);
+                    if (currentItem.Icon != null)
+                    {
+                        iconImage.sprite = currentItem.Icon;
+                        iconImage.color = Color.white;
+                        iconImage.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        iconImage.gameObject.SetActive(false);
+                    }
                 }
 
                 // Amount - show for stackable items or always for ammo
-                if (currentItem.amount > 1 || currentItem.ItemType == ItemType.Ammo)
+                if (amountText != null)
                 {
-                    amountText.text = currentItem.amount.ToString();
-                    amountText.gameObject.SetActive(true);
-                }
-                else
-                {
-                    amountText.gameObject.SetActive(false);
+                    if (currentItem.amount > 1 || currentItem.ItemType == ItemType.Ammo)
+                    {
+                        amountText.text = currentItem.amount.ToString();
+                        amountText.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        amountText.gameObject.SetActive(false);
+                    }
                 }
 
                 // Background Color based on rarity or type (Optional)

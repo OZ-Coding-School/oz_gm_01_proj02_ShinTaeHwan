@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections.Generic;
 using MiniExtractionShooter.Loot;
 using MiniExtractionShooter.Core;
+using MiniExtractionShooter.Data;
 
 namespace MiniExtractionShooter.UI
 {

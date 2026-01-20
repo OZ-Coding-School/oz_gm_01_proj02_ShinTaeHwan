@@ -20,6 +20,10 @@ namespace MiniExtractionShooter.Weapon
         [SerializeField] private int currentSlot = 0;
         [SerializeField] private WeaponBase activeWeapon;
 
+        [Header("Ammo Per Slot")]
+        [SerializeField] private int primaryAmmo = -1;   // -1 = not initialized
+        [SerializeField] private int secondaryAmmo = -1; // -1 = not initialized
+
         [Header("Weapon Holder")]
         [SerializeField] private Transform weaponHolder;
 
@@ -29,6 +33,7 @@ namespace MiniExtractionShooter.Weapon
         public event System.Action OnFired;
         public event System.Action OnReloadStart;
         public event System.Action OnReloadComplete;
+        public event System.Action<float> OnReloadProgress; // 0-1 progress
 
         public WeaponData CurrentWeaponData => currentSlot == 0 ? primaryWeapon : secondaryWeapon;
         public WeaponBase ActiveWeapon => activeWeapon;
@@ -47,12 +52,40 @@ namespace MiniExtractionShooter.Weapon
             }
         }
 
+        private Player.PlayerAnimator playerAnimator;
+
         private void Start()
         {
             // 시작 무기 장착
             if (primaryWeapon != null)
             {
                 EquipWeapon(primaryWeapon);
+            }
+
+            // 구르기 시 재장전 취소
+            playerAnimator = FindFirstObjectByType<Player.PlayerAnimator>();
+            if (playerAnimator != null)
+            {
+                playerAnimator.OnRollStart += CancelReload;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (playerAnimator != null)
+            {
+                playerAnimator.OnRollStart -= CancelReload;
+            }
+        }
+
+        /// <summary>
+        /// 재장전 취소 (외부에서 호출 가능)
+        /// </summary>
+        public void CancelReload()
+        {
+            if (activeWeapon != null && activeWeapon.IsReloading)
+            {
+                activeWeapon.CancelReload();
             }
         }
 
@@ -88,8 +121,20 @@ namespace MiniExtractionShooter.Weapon
             WeaponData targetWeapon = slot == 0 ? primaryWeapon : secondaryWeapon;
             if (targetWeapon == null) return;
 
+            // 무기 교체 시 재장전 취소
+            if (activeWeapon != null && activeWeapon.IsReloading)
+            {
+                activeWeapon.CancelReload();
+            }
+
+            // 현재 무기의 탄약 저장
+            SaveCurrentAmmo();
+
             currentSlot = slot;
-            EquipWeapon(targetWeapon);
+            
+            // 저장된 탄약으로 무기 장착
+            int savedAmmo = slot == 0 ? primaryAmmo : secondaryAmmo;
+            EquipWeapon(targetWeapon, savedAmmo);
         }
 
         /// <summary>
@@ -102,9 +147,36 @@ namespace MiniExtractionShooter.Weapon
         }
 
         /// <summary>
-        /// 무기 장착
+        /// 현재 무기의 탄약 저장
+        /// </summary>
+        private void SaveCurrentAmmo()
+        {
+            if (activeWeapon == null) return;
+            
+            int currentAmmo = activeWeapon.CurrentAmmo;
+            
+            if (currentSlot == 0)
+            {
+                primaryAmmo = currentAmmo;
+            }
+            else
+            {
+                secondaryAmmo = currentAmmo;
+            }
+        }
+
+        /// <summary>
+        /// 무기 장착 (기본 - 저장된 탄약 또는 풀탄창)
         /// </summary>
         private void EquipWeapon(WeaponData weaponData)
+        {
+            EquipWeapon(weaponData, -1);
+        }
+
+        /// <summary>
+        /// 무기 장착 (탄약 수 지정)
+        /// </summary>
+        private void EquipWeapon(WeaponData weaponData, int ammo)
         {
             // 기존 무기 이벤트 해제
             if (activeWeapon != null)
@@ -113,6 +185,7 @@ namespace MiniExtractionShooter.Weapon
                 activeWeapon.OnAmmoChanged -= HandleAmmoChanged;
                 activeWeapon.OnReloadStart -= HandleReloadStart;
                 activeWeapon.OnReloadComplete -= HandleReloadComplete;
+                activeWeapon.OnReloadProgress -= HandleReloadProgress;
             }
 
             // 무기 오브젝트 생성 또는 업데이트
@@ -127,13 +200,16 @@ namespace MiniExtractionShooter.Weapon
                 weaponObj.AddComponent<RecoilSystem>();
             }
 
-            activeWeapon.SetWeaponData(weaponData);
+            // 탄약 설정: -1이면 풀탄창, 그 외에는 지정된 탄약
+            int targetAmmo = ammo >= 0 ? ammo : weaponData.magazineSize;
+            activeWeapon.SetWeaponData(weaponData, targetAmmo);
 
             // 이벤트 연결
             activeWeapon.OnFired += HandleFired;
             activeWeapon.OnAmmoChanged += HandleAmmoChanged;
             activeWeapon.OnReloadStart += HandleReloadStart;
             activeWeapon.OnReloadComplete += HandleReloadComplete;
+            activeWeapon.OnReloadProgress += HandleReloadProgress;
 
             OnWeaponChanged?.Invoke(weaponData);
         }
@@ -221,11 +297,9 @@ namespace MiniExtractionShooter.Weapon
         private void HandleAmmoChanged(int current, int max) => OnAmmoChanged?.Invoke(current, max);
         private void HandleReloadStart() => OnReloadStart?.Invoke();
         private void HandleReloadComplete() => OnReloadComplete?.Invoke();
+        private void HandleReloadProgress(float progress) => OnReloadProgress?.Invoke(progress);
 
         #region Save/Load Support
-
-        [Header("Available Weapons (for Save/Load)")]
-        [SerializeField] private List<WeaponData> availableWeapons = new List<WeaponData>();
 
         /// <summary>
         /// 주무기 이름 반환 (저장용)
@@ -244,31 +318,19 @@ namespace MiniExtractionShooter.Weapon
         }
 
         /// <summary>
-        /// 이름으로 무기 데이터 찾기 (로드용)
+        /// 주무기 반환
         /// </summary>
-        public WeaponData FindWeaponByName(string weaponName)
+        public WeaponData GetPrimaryWeapon()
         {
-            if (string.IsNullOrEmpty(weaponName)) return null;
+            return primaryWeapon;
+        }
 
-            foreach (var weapon in availableWeapons)
-            {
-                if (weapon != null && weapon.itemName == weaponName)
-                {
-                    return weapon;
-                }
-            }
-
-            // Resources 폴더에서 찾기 (fallback)
-            WeaponData[] allWeapons = Resources.LoadAll<WeaponData>("");
-            foreach (var weapon in allWeapons)
-            {
-                if (weapon.itemName == weaponName)
-                {
-                    return weapon;
-                }
-            }
-
-            return null;
+        /// <summary>
+        /// 보조무기 반환
+        /// </summary>
+        public WeaponData GetSecondaryWeapon()
+        {
+            return secondaryWeapon;
         }
 
         /// <summary>

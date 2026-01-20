@@ -3,14 +3,6 @@ using System.Collections.Generic;
 
 namespace MiniExtractionShooter.Data
 {
-    public enum ItemType
-    {
-        Weapon,
-        Ammo,
-        Armor,
-        Health,
-        Valuable
-    }
 
     [System.Serializable]
     public class LootEntry

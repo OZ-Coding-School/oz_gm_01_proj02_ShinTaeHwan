@@ -243,7 +243,7 @@ namespace MiniExtractionShooter.Core
             // 무기 복원
             if (!string.IsNullOrEmpty(data.primaryWeaponName))
             {
-                WeaponData primary = wm.FindWeaponByName(data.primaryWeaponName);
+                WeaponData primary = WeaponDatabase.Instance?.FindByName(data.primaryWeaponName);
                 if (primary != null)
                 {
                     wm.SetPrimaryWeapon(primary);
@@ -252,7 +252,7 @@ namespace MiniExtractionShooter.Core
 
             if (!string.IsNullOrEmpty(data.secondaryWeaponName))
             {
-                WeaponData secondary = wm.FindWeaponByName(data.secondaryWeaponName);
+                WeaponData secondary = WeaponDatabase.Instance?.FindByName(data.secondaryWeaponName);
                 if (secondary != null)
                 {
                     wm.SetSecondaryWeapon(secondary);

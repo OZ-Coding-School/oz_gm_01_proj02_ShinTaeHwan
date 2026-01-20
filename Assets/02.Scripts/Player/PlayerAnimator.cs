@@ -144,6 +144,12 @@ namespace MiniExtractionShooter.Player
             if (isRolling) return;
             if (Time.time - lastRollTime < rollCooldown) return;
             
+            // 스태미나 부족 시 구르기 불가
+            if (PlayerStamina.Instance != null && !PlayerStamina.Instance.CanRoll())
+            {
+                return;
+            }
+            
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 StartRoll();
@@ -155,6 +161,12 @@ namespace MiniExtractionShooter.Player
         /// </summary>
         private void StartRoll()
         {
+            // 스태미나 소모
+            if (PlayerStamina.Instance != null)
+            {
+                PlayerStamina.Instance.ConsumeRollStamina();
+            }
+            
             isRolling = true;
             lastRollTime = Time.time;
             

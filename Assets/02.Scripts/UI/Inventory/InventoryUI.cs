@@ -266,13 +266,9 @@ namespace MiniExtractionShooter.UI.Inventory
         {
             if (WeaponManager.Instance == null) return null;
 
-            string weaponName = slot == 0 
-                ? WeaponManager.Instance.GetPrimaryWeaponName() 
-                : WeaponManager.Instance.GetSecondaryWeaponName();
-
-            if (string.IsNullOrEmpty(weaponName)) return null;
-
-            return WeaponManager.Instance.FindWeaponByName(weaponName);
+            return slot == 0 
+                ? WeaponManager.Instance.GetPrimaryWeapon() 
+                : WeaponManager.Instance.GetSecondaryWeapon();
         }
 
 

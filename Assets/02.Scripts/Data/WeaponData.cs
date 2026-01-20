@@ -1,4 +1,5 @@
 using UnityEngine;
+using MiniExtractionShooter.Data;
 
 namespace MiniExtractionShooter.Data
 {

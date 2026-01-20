@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7abd308fca3b4950aa19fc4c8ae4e16, type: 3}
   m_Name: Pistol
   m_EditorClassIdentifier: 
-  itemName: New Item
+  itemName: M1911
   itemType: 0
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 19273d2d8f3ae46ec8aa64dd7db829d7, type: 3}
   isStackable: 0
   maxStackSize: 1
   description: 

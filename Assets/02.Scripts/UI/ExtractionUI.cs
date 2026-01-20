@@ -34,6 +34,11 @@ namespace MiniExtractionShooter.UI
         private ExtractionZone currentZone;
         private bool isAnimating = false;
 
+        private void Awake()
+        {
+            CreateUIElementsIfMissing();
+        }
+
         private void Start()
         {
             Hide();
