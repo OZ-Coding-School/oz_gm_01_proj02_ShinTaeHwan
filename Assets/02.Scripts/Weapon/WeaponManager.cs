@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using MiniExtractionShooter.Data;
+using MiniExtractionShooter.Player;
 
 namespace MiniExtractionShooter.Weapon
 {
@@ -56,10 +57,19 @@ namespace MiniExtractionShooter.Weapon
 
         private void Start()
         {
-            // 시작 무기 장착
-            if (primaryWeapon != null)
+            // 시작 시 저장된 슬롯 또는 기본 슬롯에 맞는 무기 장착
+            // SaveDataManager에서 이미 로드되었을 수 있으므로 currentSlot을 존중
+            if (currentSlot == 0 && primaryWeapon != null)
             {
-                EquipWeapon(primaryWeapon);
+                SwitchToWeapon(0);
+            }
+            else if (currentSlot == 1 && secondaryWeapon != null)
+            {
+                SwitchToWeapon(1);
+            }
+            else if (primaryWeapon != null)
+            {
+                SwitchToWeapon(0);
             }
 
             // 구르기 시 재장전 취소
@@ -105,6 +115,14 @@ namespace MiniExtractionShooter.Weapon
         /// </summary>
         public void Reload()
         {
+            // 아이템 사용 중에는 재장전 불가
+            if (PlayerConsumableSystem.Instance != null && 
+                PlayerConsumableSystem.Instance.IsUsingItem)
+            {
+                Debug.Log("[WeaponManager] Cannot reload while using item.");
+                return;
+            }
+            
             if (activeWeapon != null)
             {
                 activeWeapon.TryReload();

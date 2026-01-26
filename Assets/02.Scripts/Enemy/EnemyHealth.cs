@@ -11,9 +11,6 @@ namespace MiniExtractionShooter.Enemy
     /// </summary>
     public class EnemyHealth : MonoBehaviour, IDamageable
     {
-        [Header("Data")]
-        [SerializeField] private EnemyData enemyData;
-
         [Header("Stats")]
         [SerializeField] private float maxHealth = 60f;
         [SerializeField] private float currentHealth;
@@ -34,20 +31,24 @@ namespace MiniExtractionShooter.Enemy
         public float HealthPercentage => currentHealth / maxHealth;
         public bool IsDead => isDead;
 
+        private Enemy enemy;
+        private EnemyData EnemyData => enemy != null ? enemy.Data : null;
+        
         private HitboxManager hitboxManager;
         private EnemyDropSystem dropSystem;
 
         private void Awake()
         {
+            enemy = GetComponent<Enemy>();
             hitboxManager = GetComponent<HitboxManager>();
             dropSystem = GetComponent<EnemyDropSystem>();
         }
 
         private void Start()
         {
-            if (enemyData != null)
+            if (EnemyData != null)
             {
-                maxHealth = enemyData.health;
+                maxHealth = EnemyData.health;
             }
             currentHealth = maxHealth;
 
@@ -156,9 +157,14 @@ namespace MiniExtractionShooter.Enemy
             // 사망 이펙트
             PlayDeathEffect();
 
+            string soundName = (EnemyData != null && !string.IsNullOrEmpty(EnemyData.deathSoundName)) 
+                ? EnemyData.deathSoundName 
+                : "EnemyDie";
+            Managers.SoundManager.Instance?.PlaySFX(soundName, transform.position);
+
             Destroy(gameObject);
 
-            Debug.Log($"Enemy '{gameObject.name}' died!");
+            // Debug.Log($"Enemy '{gameObject.name}' died!");
         }
 
         /// <summary>
@@ -166,7 +172,8 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         private void PlayHitFeedback()
         {
-            // TODO: 피격 애니메이션, 사운드 등
+            // TODO: 피격 애니메이션 등
+            Managers.SoundManager.Instance?.PlaySFX("EnemyHit", transform.position);
         }
 
         /// <summary>
@@ -174,14 +181,14 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         private void PlayDeathEffect()
         {
-            if (enemyData != null && enemyData.deathEffectPrefab != null)
+            if (EnemyData != null && EnemyData.deathEffectPrefab != null)
             {
                 // deathEffectPrefab is GameObject, need to get/create a component for pooling
-                MonoBehaviour component = enemyData.deathEffectPrefab.GetComponent<MonoBehaviour>();
+                MonoBehaviour component = EnemyData.deathEffectPrefab.GetComponent<MonoBehaviour>();
                 if (component == null)
                 {
                     // If no component exists, instantiate directly (not pooled)
-                    GameObject effect = Instantiate(enemyData.deathEffectPrefab, transform.position, Quaternion.identity);
+                    GameObject effect = Instantiate(EnemyData.deathEffectPrefab, transform.position, Quaternion.identity);
                     Destroy(effect, 3f);
                     return;
                 }
@@ -197,16 +204,6 @@ namespace MiniExtractionShooter.Enemy
 
             // 레그돌 또는 사망 애니메이션
             // TODO: 구현
-        }
-
-        /// <summary>
-        /// EnemyData 설정
-        /// </summary>
-        public void SetEnemyData(EnemyData data)
-        {
-            enemyData = data;
-            maxHealth = data.health;
-            currentHealth = maxHealth;
         }
 
         /// <summary>

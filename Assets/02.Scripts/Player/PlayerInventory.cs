@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using MiniExtractionShooter.Data;
+using MiniExtractionShooter.Core;
 
 namespace MiniExtractionShooter.Player
 {
@@ -25,6 +26,7 @@ namespace MiniExtractionShooter.Player
         public WeaponData WeaponData => itemData as WeaponData;
         public ArmorData ArmorData => itemData as ArmorData;
         public AmmoData AmmoData => itemData as AmmoData;
+        public ConsumableData ConsumableData => itemData as ConsumableData;
 
         public InventoryItem() { }
 
@@ -46,16 +48,14 @@ namespace MiniExtractionShooter.Player
         [Header("Current Equipment")]
         [SerializeField] private ArmorData currentArmor;
 
-        [Header("Items")]
-        [SerializeField] private List<InventoryItem> items = new List<InventoryItem>();
+        [Header("Inventory Slots")]
+        [SerializeField] private int maxInventorySlots = 30;
+        private InventoryItem[] slots; // 고정 크기 배열 (슬롯 인덱스 기반)
 
         [Header("Starting Items")]
         [SerializeField] private AmmoData pistolAmmoData;
         [SerializeField] private AmmoData rifleAmmoData;
         [SerializeField] private int startingPistolAmmo = 36;
-
-        [Header("Limits")]
-        [SerializeField] private int maxInventorySlots = 30;
 
         // Events
         public event System.Action<AmmoType, int> OnAmmoChanged;
@@ -65,13 +65,40 @@ namespace MiniExtractionShooter.Player
         public event System.Action OnInventoryChanged;
 
         public ArmorData CurrentArmor => currentArmor;
-        public List<InventoryItem> Items => items;
+        
+        /// <summary>
+        /// 슬롯 배열 반환 (null 포함)
+        /// </summary>
+        public InventoryItem[] Slots => slots;
+        
+        /// <summary>
+        /// 하위 호환을 위한 Items 리스트 (null 제외한 아이템만)
+        /// </summary>
+        public List<InventoryItem> Items
+        {
+            get
+            {
+                var list = new List<InventoryItem>();
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (slots[i] != null)
+                    {
+                        list.Add(slots[i]);
+                    }
+                }
+                return list;
+            }
+        }
+
+        public int MaxSlots => maxInventorySlots;
 
         private void Awake()
         {
             if (Instance == null)
             {
                 Instance = this;
+                // 슬롯 배열 초기화
+                slots = new InventoryItem[maxInventorySlots];
             }
             else
             {
@@ -82,8 +109,11 @@ namespace MiniExtractionShooter.Player
 
         private void Start()
         {
-            // 시작 탄약 추가
-            InitializeStartingItems();
+            // 저장 파일이 없을 때만 시작 아이템 추가
+            if (SaveDataManager.Instance == null || !SaveDataManager.Instance.HasSaveFile())
+            {
+                InitializeStartingItems();
+            }
         }
 
         /// <summary>
@@ -100,7 +130,7 @@ namespace MiniExtractionShooter.Player
         #region Item Management
 
         /// <summary>
-        /// ItemData로 아이템 추가
+        /// ItemData로 아이템 추가 (빈 슬롯에 자동 배치)
         /// </summary>
         public bool AddItem(ItemData itemData, int amount = 1)
         {
@@ -129,11 +159,15 @@ namespace MiniExtractionShooter.Player
                 }
             }
 
-            // 새 슬롯에 추가
-            if (items.Count >= maxInventorySlots) return false;
-
+            // 빈 슬롯 찾기
+            int emptySlot = FindFirstEmptySlot();
+            if (emptySlot < 0) 
+            {
+                Debug.LogWarning("[PlayerInventory] No empty slots available!");
+                return false; // 인벤토리 가득 참
+            }
             InventoryItem newItem = new InventoryItem(itemData, amount);
-            items.Add(newItem);
+            slots[emptySlot] = newItem;
             OnItemAdded?.Invoke(newItem);
             OnInventoryChanged?.Invoke();
 
@@ -144,6 +178,113 @@ namespace MiniExtractionShooter.Player
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// 특정 슬롯에 아이템 추가
+        /// </summary>
+        public bool AddItemToSlot(int slotIndex, ItemData itemData, int amount = 1)
+        {
+            if (slotIndex < 0 || slotIndex >= slots.Length) return false;
+            if (itemData == null || amount <= 0) return false;
+            if (slots[slotIndex] != null) return false; // 슬롯이 이미 사용 중
+
+            InventoryItem newItem = new InventoryItem(itemData, amount);
+            slots[slotIndex] = newItem;
+            OnItemAdded?.Invoke(newItem);
+            OnInventoryChanged?.Invoke();
+
+            if (itemData is AmmoData ammoData)
+            {
+                OnAmmoChanged?.Invoke(ammoData.ammoType, GetAmmo(ammoData.ammoType));
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 첫 번째 빈 슬롯 인덱스 찾기
+        /// </summary>
+        public int FindFirstEmptySlot()
+        {
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] == null)
+                {
+                    return i;
+                }
+            }
+            return -1; // 빈 슬롯 없음
+        }
+
+        /// <summary>
+        /// 두 슬롯의 아이템 교환
+        /// </summary>
+        public void SwapSlots(int fromIndex, int toIndex)
+        {
+            // Debug.Log($"[PlayerInventory] SwapSlots called: from={fromIndex}, to={toIndex}");
+            
+            if (fromIndex < 0 || fromIndex >= slots.Length)
+            {
+                Debug.LogWarning($"[PlayerInventory] Invalid fromIndex: {fromIndex}");
+                return;
+            }
+            if (toIndex < 0 || toIndex >= slots.Length)
+            {
+                Debug.LogWarning($"[PlayerInventory] Invalid toIndex: {toIndex}");
+                return;
+            }
+            if (fromIndex == toIndex) return;
+
+            var fromItem = slots[fromIndex];
+            var toItem = slots[toIndex];
+            // Debug.Log($"[PlayerInventory] Swapping: [{fromIndex}]={fromItem?.ItemName ?? "null"} <-> [{toIndex}]={toItem?.ItemName ?? "null"}");
+
+            slots[toIndex] = fromItem;
+            slots[fromIndex] = toItem;
+            
+            OnInventoryChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 아이템 슬롯 인덱스 찾기
+        /// </summary>
+        public int GetSlotIndex(InventoryItem item)
+        {
+            if (item == null) return -1;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] == item)
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 특정 슬롯 비우기
+        /// </summary>
+        public void ClearSlot(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= slots.Length) return;
+            
+            var item = slots[slotIndex];
+            if (item != null)
+            {
+                slots[slotIndex] = null;
+                OnItemRemoved?.Invoke(item);
+                OnInventoryChanged?.Invoke();
+            }
+        }
+
+        /// <summary>
+        /// 특정 슬롯의 아이템 가져오기
+        /// </summary>
+        public InventoryItem GetSlot(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= slots.Length) return null;
+            return slots[slotIndex];
         }
 
         /// <summary>
@@ -162,17 +303,19 @@ namespace MiniExtractionShooter.Player
             }
             else
             {
-                Debug.LogWarning($"[PlayerInventory] LootEntry has no ItemData: {lootEntry.itemName}");
+                Debug.LogWarning($"[PlayerInventory] LootEntry has no ItemData: {lootEntry.ItemName}");
             }
         }
 
         /// <summary>
-        /// 아이템 제거
+        /// 아이템 제거 (슬롯을 null로 설정)
         /// </summary>
         public bool RemoveItem(InventoryItem item)
         {
-            if (items.Remove(item))
+            int slotIndex = GetSlotIndex(item);
+            if (slotIndex >= 0)
             {
+                slots[slotIndex] = null;
                 OnItemRemoved?.Invoke(item);
                 OnInventoryChanged?.Invoke();
                 return true;
@@ -181,16 +324,17 @@ namespace MiniExtractionShooter.Player
         }
 
         /// <summary>
-        /// 아이템 수량 감소
+        /// 아이템 수량 감소 (슬롯 위치 유지)
         /// </summary>
         public bool RemoveItemAmount(InventoryItem item, int amount)
         {
-            if (item == null || !items.Contains(item)) return false;
+            int slotIndex = GetSlotIndex(item);
+            if (slotIndex < 0) return false;
 
             item.amount -= amount;
             if (item.amount <= 0)
             {
-                items.Remove(item);
+                slots[slotIndex] = null; // 슬롯은 null로 설정 (위치 영향 X)
                 OnItemRemoved?.Invoke(item);
             }
 
@@ -199,11 +343,18 @@ namespace MiniExtractionShooter.Player
         }
 
         /// <summary>
-        /// ItemData로 아이템 찾기
+        /// ItemData로 아이템 찾기 (슬롯 배열에서 검색)
         /// </summary>
         public InventoryItem FindItem(ItemData itemData)
         {
-            return items.FirstOrDefault(i => i.itemData == itemData);
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] != null && slots[i].itemData == itemData)
+                {
+                    return slots[i];
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -211,15 +362,25 @@ namespace MiniExtractionShooter.Player
         /// </summary>
         public InventoryItem FindItemByType(ItemType type)
         {
-            return items.FirstOrDefault(i => i.ItemType == type);
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] != null && slots[i].ItemType == type)
+                {
+                    return slots[i];
+                }
+            }
+            return null;
         }
 
         /// <summary>
-        /// 모든 아이템 비우기
+        /// 모든 아이템 비우기 (모든 슬롯 null로)
         /// </summary>
         public void ClearItems()
         {
-            items.Clear();
+            for (int i = 0; i < slots.Length; i++)
+            {
+                slots[i] = null;
+            }
             OnInventoryChanged?.Invoke();
         }
 
@@ -233,9 +394,10 @@ namespace MiniExtractionShooter.Player
         public int GetAmmo(AmmoType type)
         {
             int total = 0;
-            foreach (var item in items)
+            for (int i = 0; i < slots.Length; i++)
             {
-                if (item.AmmoData != null && item.AmmoData.ammoType == type)
+                var item = slots[i];
+                if (item != null && item.AmmoData != null && item.AmmoData.ammoType == type)
                 {
                     total += item.amount;
                 }
@@ -244,27 +406,29 @@ namespace MiniExtractionShooter.Player
         }
 
         /// <summary>
-        /// 탄약 사용
+        /// 탄약 사용 (슬롯 위치 유지)
         /// </summary>
         public bool UseAmmo(AmmoType type, int amount)
         {
             if (GetAmmo(type) < amount) return false;
 
             int remaining = amount;
-            var ammoItems = items.Where(i => i.AmmoData != null && i.AmmoData.ammoType == type).ToList();
-
-            foreach (var item in ammoItems)
+            
+            // 탄약 아이템이 있는 슬롯 찾기
+            for (int i = 0; i < slots.Length && remaining > 0; i++)
             {
-                if (remaining <= 0) break;
-
-                int toUse = Mathf.Min(item.amount, remaining);
-                item.amount -= toUse;
-                remaining -= toUse;
-
-                if (item.amount <= 0)
+                var item = slots[i];
+                if (item != null && item.AmmoData != null && item.AmmoData.ammoType == type)
                 {
-                    items.Remove(item);
-                    OnItemRemoved?.Invoke(item);
+                    int toUse = Mathf.Min(item.amount, remaining);
+                    item.amount -= toUse;
+                    remaining -= toUse;
+
+                    if (item.amount <= 0)
+                    {
+                        slots[i] = null; // 슬롯을 null로 설정 (위치 유지)
+                        OnItemRemoved?.Invoke(item);
+                    }
                 }
             }
 
@@ -291,8 +455,14 @@ namespace MiniExtractionShooter.Player
         private AmmoData FindAmmoDataByType(AmmoType type)
         {
             // 인벤토리에서 먼저 찾기
-            var existing = items.FirstOrDefault(i => i.AmmoData != null && i.AmmoData.ammoType == type);
-            if (existing != null) return existing.AmmoData;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var item = slots[i];
+                if (item != null && item.AmmoData != null && item.AmmoData.ammoType == type)
+                {
+                    return item.AmmoData;
+                }
+            }
 
             // 설정된 탄약 데이터 사용
             if (type == AmmoType.Pistol && pistolAmmoData != null)
@@ -356,36 +526,14 @@ namespace MiniExtractionShooter.Player
         #region Utility
 
         /// <summary>
-        /// 아이템 사용
-        /// </summary>
-        public bool UseItem(InventoryItem item)
-        {
-            if (!items.Contains(item)) return false;
-
-            switch (item.ItemType)
-            {
-                case ItemType.Health:
-                    if (PlayerHealth.Instance != null)
-                    {
-                        PlayerHealth.Instance.Heal(item.amount);
-                        RemoveItem(item);
-                        return true;
-                    }
-                    break;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// 회복 아이템 사용
+        /// 회복 아이템 사용 - PlayerConsumableSystem에 위임
         /// </summary>
         public bool UseHealthItem()
         {
             InventoryItem healthItem = FindItemByType(ItemType.Health);
-            if (healthItem != null)
+            if (healthItem != null && PlayerConsumableSystem.Instance != null)
             {
-                return UseItem(healthItem);
+                return PlayerConsumableSystem.Instance.UseItem(healthItem);
             }
             return false;
         }
@@ -396,7 +544,7 @@ namespace MiniExtractionShooter.Player
         public void ResetInventory()
         {
             currentArmor = null;
-            items.Clear();
+            ClearItems(); // slots 배열 초기화
 
             if (PlayerController.Instance != null)
             {
@@ -416,15 +564,18 @@ namespace MiniExtractionShooter.Player
         #region Save/Load Support
 
         /// <summary>
-        /// 탄약 직접 설정 (로드용)
+        /// 탄약 직접 설정 (로드용, 슬롯 위치 유지)
         /// </summary>
         public void SetAmmo(AmmoType type, int amount)
         {
-            // 기존 탄약 제거
-            var existingAmmo = items.Where(i => i.AmmoData != null && i.AmmoData.ammoType == type).ToList();
-            foreach (var item in existingAmmo)
+            // 기존 탄약 제거 (슬롯 위치는 null로 설정)
+            for (int i = 0; i < slots.Length; i++)
             {
-                items.Remove(item);
+                var item = slots[i];
+                if (item != null && item.AmmoData != null && item.AmmoData.ammoType == type)
+                {
+                    slots[i] = null;
+                }
             }
 
             // 새로 추가
@@ -439,16 +590,19 @@ namespace MiniExtractionShooter.Player
         /// </summary>
         public void AddItemFromSaveData(ItemSaveData saveData)
         {
-            // ItemData 찾기 (Resources에서)
-            ItemData itemData = Resources.Load<ItemData>(saveData.itemName);
+            // Debug.Log($"[PlayerInventory] AddItemFromSaveData 호출: itemName={saveData.itemName}, amount={saveData.amount}");
+
+            // ItemDatabase를 통해 아이템 찾기
+            ItemData itemData = ItemDatabase.Instance.GetItemByName(saveData.itemName);
 
             if (itemData != null)
             {
+                // Debug.Log($"[PlayerInventory] ItemData 로드 성공: {itemData.itemName}");
                 AddItem(itemData, saveData.amount);
             }
             else
             {
-                Debug.LogWarning($"[PlayerInventory] Could not find ItemData: {saveData.itemName}");
+                Debug.LogError($"[PlayerInventory] ItemDatabase에서 아이템을 찾을 수 없음: '{saveData.itemName}'. ItemDatabase 에셋이 Resources 폴더에 있는지, 그리고 아이템이 등록되었는지 확인하세요.");
             }
         }
 

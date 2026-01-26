@@ -13,9 +13,6 @@ namespace MiniExtractionShooter.Enemy
     /// </summary>
     public class EnemyCombat : MonoBehaviour
     {
-        [Header("Data")]
-        [SerializeField] private EnemyData enemyData;
-
         [Header("Fire Point")]
         [SerializeField] private Transform firePoint;
 
@@ -24,6 +21,8 @@ namespace MiniExtractionShooter.Enemy
         [SerializeField] private bool isReloading = false;
 
         private float nextAttackTime = 0f;
+        private Enemy enemy;
+        private EnemyData EnemyData => enemy != null ? enemy.Data : null;
         private EnemyAI enemyAI;
 
         // Events
@@ -36,6 +35,7 @@ namespace MiniExtractionShooter.Enemy
 
         private void Awake()
         {
+            enemy = GetComponent<Enemy>();
             enemyAI = GetComponent<EnemyAI>();
 
             if (firePoint == null)
@@ -46,18 +46,23 @@ namespace MiniExtractionShooter.Enemy
 
         private void Start()
         {
-            if (enemyData != null && enemyData.equippedWeapon != null)
+            if (EnemyData != null && EnemyData.equippedWeapon != null)
             {
                 // 탄약 랜덤 초기화
-                currentAmmo = Random.Range(enemyData.minAmmo, enemyData.maxAmmo + 1);
+                currentAmmo = Random.Range(EnemyData.minAmmo, EnemyData.maxAmmo + 1);
 
                 // Initialize pools
-                if (enemyData.equippedWeapon.muzzleFlashPrefab != null)
-                    PoolManager.Instance.CreatePool(enemyData.equippedWeapon.muzzleFlashPrefab, 10);
+                if (EnemyData.equippedWeapon.muzzleFlashPrefab != null)
+                    PoolManager.Instance.CreatePool(EnemyData.equippedWeapon.muzzleFlashPrefab, 10);
 
-                if (enemyData.equippedWeapon.bulletTrailPrefab != null)
-                    PoolManager.Instance.CreatePool(enemyData.equippedWeapon.bulletTrailPrefab, 15);
+                if (EnemyData.equippedWeapon.bulletTrailPrefab != null)
+                    PoolManager.Instance.CreatePool(EnemyData.equippedWeapon.bulletTrailPrefab, 15);
             }
+        }
+
+        private void OnDisable()
+        {
+            StopFiringLoop();
         }
 
         /// <summary>
@@ -65,7 +70,7 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         public bool TryAttack(Transform target)
         {
-            if (enemyData == null || enemyData.equippedWeapon == null) return false;
+            if (EnemyData == null || EnemyData.equippedWeapon == null) return false;
             if (isReloading) return false;
             if (Time.time < nextAttackTime) return false;
 
@@ -85,8 +90,10 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         private void Attack(Transform target)
         {
+            StartFiringLoop(); // 연발 사운드 시작 (이미 재생 중이면 무시됨)
+
             currentAmmo--;
-            nextAttackTime = Time.time + enemyData.attackInterval;
+            nextAttackTime = Time.time + EnemyData.attackInterval;
 
             // 항상 레이캐스트 발사 (명중률은 확산으로 적용)
             PerformAttackRaycast(target);
@@ -103,6 +110,8 @@ namespace MiniExtractionShooter.Enemy
             }
         }
 
+
+
         /// <summary>
         /// 공격 레이캐스트 - WeaponBase와 동일한 방식
         /// 명중률을 확산으로 변환하여 적용
@@ -118,11 +127,11 @@ namespace MiniExtractionShooter.Enemy
             // 명중률 기반 확산 적용
             bool playerMoving = PlayerController.Instance?.IsMoving ?? false;
             float distance = Vector3.Distance(transform.position, target.position);
-            float accuracy = enemyData.CalculateAccuracy(distance, playerMoving);
+            float accuracy = EnemyData.CalculateAccuracy(distance, playerMoving);
             direction = ApplyAccuracySpread(direction, accuracy);
 
             // 레이캐스트 발사
-            float maxRange = enemyData.equippedWeapon.maxRange;
+            float maxRange = EnemyData.equippedWeapon.maxRange;
             Vector3 endPoint = origin + direction * maxRange;
 
             if (Physics.Raycast(origin, direction, out RaycastHit hit, maxRange))
@@ -134,14 +143,14 @@ namespace MiniExtractionShooter.Enemy
                 if (hitZone != null)
                 {
                     // 적 → 플레이어 데미지는 부위 배율 적용하지 않고 기본 데미지만 (밸런스)
-                    float damage = enemyData.equippedWeapon.baseDamage;
+                    float damage = EnemyData.equippedWeapon.baseDamage;
 
                     // 거리 감쇠 적용
                     float hitDistance = Vector3.Distance(origin, hit.point);
                     float falloff = DamageCalculator.GetDistanceFalloff(
                         hitDistance,
-                        enemyData.equippedWeapon.effectiveRange,
-                        enemyData.equippedWeapon.maxRange
+                        EnemyData.equippedWeapon.effectiveRange,
+                        EnemyData.equippedWeapon.maxRange
                     );
 
                     hitZone.TakeDamage(damage * falloff);
@@ -157,12 +166,12 @@ namespace MiniExtractionShooter.Enemy
 
                     if (playerHealth != null)
                     {
-                        float damage = enemyData.equippedWeapon.baseDamage;
+                        float damage = EnemyData.equippedWeapon.baseDamage;
                         float hitDistance = Vector3.Distance(origin, hit.point);
                         float falloff = DamageCalculator.GetDistanceFalloff(
                             hitDistance,
-                            enemyData.equippedWeapon.effectiveRange,
-                            enemyData.equippedWeapon.maxRange
+                            EnemyData.equippedWeapon.effectiveRange,
+                            EnemyData.equippedWeapon.maxRange
                         );
 
                         // 플레이어 방어력 적용
@@ -192,17 +201,86 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         private System.Collections.IEnumerator ReloadCoroutine()
         {
-            if (enemyData?.equippedWeapon == null) yield break;
+            StopFiringLoop(); // 재장전 시 루프 중단
+
+            if (EnemyData?.equippedWeapon == null) yield break;
 
             isReloading = true;
             OnReloadStart?.Invoke();
 
-            yield return new WaitForSeconds(enemyData.equippedWeapon.reloadTime);
+            yield return new WaitForSeconds(EnemyData.equippedWeapon.reloadTime);
 
-            currentAmmo = enemyData.equippedWeapon.magazineSize;
+            currentAmmo = EnemyData.equippedWeapon.magazineSize;
             isReloading = false;
 
             OnReloadComplete?.Invoke();
+        }
+
+        private AudioSource fireLoopSource;
+        private float fireLoopStartTime;
+        private Coroutine stopLoopCoroutine;
+
+        public void StartFiringLoop()
+        {
+            if (EnemyData?.equippedWeapon != null && EnemyData.equippedWeapon.useLoopingFireSound)
+            {
+                // 탄약이 없거나 재장전 중이면 재생하지 않음
+                if (currentAmmo <= 0 || isReloading) return;
+
+                if (fireLoopSource == null && !string.IsNullOrEmpty(EnemyData.equippedWeapon.fireSoundName))
+                {
+                    if (stopLoopCoroutine != null)
+                    {
+                        StopCoroutine(stopLoopCoroutine);
+                        stopLoopCoroutine = null;
+                    }
+
+                    fireLoopSource = Managers.SoundManager.Instance?.PlayLoopingSFX(EnemyData.equippedWeapon.fireSoundName, firePoint.position);
+                    fireLoopStartTime = Time.time;
+                }
+            }
+        }
+
+        public void StopFiringLoop()
+        {
+            if (fireLoopSource != null)
+            {
+                if (EnemyData?.equippedWeapon == null)
+                {
+                    InternalStopLoop();
+                    return;
+                }
+
+                float elapsedTime = Time.time - fireLoopStartTime;
+                if (elapsedTime < EnemyData.equippedWeapon.minFireLoopDuration)
+                {
+                    float delay = EnemyData.equippedWeapon.minFireLoopDuration - elapsedTime;
+                    if (stopLoopCoroutine == null)
+                    {
+                        stopLoopCoroutine = StartCoroutine(DelayedStopLoop(delay));
+                    }
+                }
+                else
+                {
+                    InternalStopLoop();
+                }
+            }
+        }
+
+        private System.Collections.IEnumerator DelayedStopLoop(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            InternalStopLoop();
+            stopLoopCoroutine = null;
+        }
+
+        private void InternalStopLoop()
+        {
+            if (fireLoopSource != null)
+            {
+                Managers.SoundManager.Instance?.StopLoopingSFX(fireLoopSource);
+                fireLoopSource = null;
+            }
         }
 
         /// <summary>
@@ -210,18 +288,25 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         private void PlayFireEffects()
         {
-            if (enemyData?.equippedWeapon == null) return;
+            if (EnemyData?.equippedWeapon == null) return;
 
-            // 발사 사운드
-            if (enemyData.equippedWeapon.fireSound != null)
+            // 발사 사운드 (루핑이 아닐 때만 원샷 재생)
+            if (!EnemyData.equippedWeapon.useLoopingFireSound)
             {
-                AudioSource.PlayClipAtPoint(enemyData.equippedWeapon.fireSound, firePoint.position);
+                if (!string.IsNullOrEmpty(EnemyData.equippedWeapon.fireSoundName))
+                {
+                    Managers.SoundManager.Instance?.PlaySFX(EnemyData.equippedWeapon.fireSoundName, firePoint.position);
+                }
+                else if (EnemyData.equippedWeapon.fireSound != null)
+                {
+                    AudioSource.PlayClipAtPoint(EnemyData.equippedWeapon.fireSound, firePoint.position);
+                }
             }
 
             // 머즐 플래시
-            if (enemyData.equippedWeapon.muzzleFlashPrefab != null)
+            if (EnemyData.equippedWeapon.muzzleFlashPrefab != null)
             {
-                var muzzleFlash = PoolManager.Instance.GetFromPool(enemyData.equippedWeapon.muzzleFlashPrefab);
+                var muzzleFlash = PoolManager.Instance.GetFromPool(EnemyData.equippedWeapon.muzzleFlashPrefab);
                 if (muzzleFlash != null)
                 {
                     muzzleFlash.transform.position = firePoint.position;
@@ -262,28 +347,18 @@ namespace MiniExtractionShooter.Enemy
         /// </summary>
         private void SpawnBulletTrail(Vector3 start, Vector3 end)
         {
-            if (enemyData?.equippedWeapon?.bulletTrailPrefab == null) return;
+            if (EnemyData?.equippedWeapon?.bulletTrailPrefab == null) return;
 
-            var trail = PoolManager.Instance.GetFromPool(enemyData.equippedWeapon.bulletTrailPrefab);
+            var trail = PoolManager.Instance.GetFromPool(EnemyData.equippedWeapon.bulletTrailPrefab);
             if (trail != null)
             {
                 trail.transform.position = start;
                 trail.transform.rotation = Quaternion.identity;
-                trail.Initialize(start, end, enemyData.equippedWeapon.muzzleVelocity);
+                trail.Initialize(start, end, EnemyData.equippedWeapon.muzzleVelocity);
             }
         }
 
-        /// <summary>
-        /// EnemyData 설정
-        /// </summary>
-        public void SetEnemyData(EnemyData data)
-        {
-            enemyData = data;
-            if (data != null && data.equippedWeapon != null)
-            {
-                currentAmmo = Random.Range(data.minAmmo, data.maxAmmo + 1);
-            }
-        }
+
 
         /// <summary>
         /// 잔여 탄약 반환 (드랍용)

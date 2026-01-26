@@ -50,8 +50,18 @@ namespace MiniExtractionShooter.UI
 
         private void Start()
         {
+            // 한 프레임 뒤에 초기화 (PlayerStats, PlayerHealth 등이 먼저 Awake되도록)
+            StartCoroutine(DelayedInitialize());
+        }
+
+        private System.Collections.IEnumerator DelayedInitialize()
+        {
+            yield return null; // 한 프레임 대기
+            
             SubscribeToEvents();
             InitializeUI();
+            
+            // Debug.Log($"[HUDBottomBar] Initialized - Hydration: {PlayerStats.Instance?.CurrentHydration}, Energy: {PlayerStats.Instance?.CurrentEnergy}");
         }
 
         private void OnDestroy()
@@ -157,10 +167,10 @@ namespace MiniExtractionShooter.UI
         {
             float percentage = current / max;
 
-            // 덮개 방식: 가득 찼을 때 Fill = 0, 비었을 때 Fill = 1
+            // 일반 방식: 가득 찼을 때 Fill = 1, 비었을 때 Fill = 0
             if (hydrationFill != null)
             {
-                hydrationFill.fillAmount = 1f - percentage;
+                hydrationFill.fillAmount = percentage;
             }
 
             // 아이콘 색상 변경 (낮을 때 회색)
@@ -174,10 +184,10 @@ namespace MiniExtractionShooter.UI
         {
             float percentage = current / max;
 
-            // 덮개 방식: 가득 찼을 때 Fill = 0, 비었을 때 Fill = 1
+            // 일반 방식: 가득 찼을 때 Fill = 1, 비었을 때 Fill = 0
             if (energyFill != null)
             {
-                energyFill.fillAmount = 1f - percentage;
+                energyFill.fillAmount = percentage;
             }
 
             // 아이콘 색상 변경 (낮을 때 회색)

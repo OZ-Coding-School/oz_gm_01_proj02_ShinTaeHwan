@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5eaea583d6c6c47608972c840bd8aa44, type: 3}
+  m_Name: FirstAidKit
+  m_EditorClassIdentifier: 
+  itemName: "\uAD6C\uAE09\uC0C1\uC790"
+  itemType: 3
+  icon: {fileID: 21300000, guid: 811a3041c639a4524960ed9cabdf9cdf, type: 3}
+  isStackable: 1
+  maxStackSize: 5
+  description: "HP\uB97C \uD68C\uBCF5\uD560 \uC218 \uC788\uB2E4."
+  restoreHealth: 30
+  restoreEnergy: 0
+  restoreHydration: 0
+  useDuration: 2
+  speedMultiplierWhenUsing: 0.5
+  useEffect: {fileID: 0}
+  useSound: {fileID: 0}

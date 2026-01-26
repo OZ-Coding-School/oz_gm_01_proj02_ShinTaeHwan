@@ -35,6 +35,9 @@ namespace MiniExtractionShooter.Level
         private void Start()
         {
             UpdateVisual();
+            
+            // UI에 등록
+            MiniExtractionShooter.UI.ExtractionUI.Instance?.RegisterZone(this);
         }
 
         private void Update()
@@ -45,12 +48,6 @@ namespace MiniExtractionShooter.Level
 
                 // 진행률 이벤트
                 OnExtractionProgress?.Invoke(ExtractionProgress);
-
-                // UI 업데이트
-                if (UIManager.Instance != null)
-                {
-                    UIManager.Instance.ShowExtractionProgress(ExtractionProgress, RemainingTime);
-                }
 
                 // 탈출 완료
                 if (currentTime >= extractionTime)
@@ -92,13 +89,7 @@ namespace MiniExtractionShooter.Level
 
             OnExtractionStarted?.Invoke();
 
-            // UI 메시지
-            if (UIManager.Instance != null)
-            {
-                UIManager.Instance.ShowMessage($"탈출 중... {extractionTime}초 대기");
-            }
-
-            Debug.Log("Extraction started!");
+            // Debug.Log("Extraction started!");
         }
 
         /// <summary>
@@ -115,14 +106,7 @@ namespace MiniExtractionShooter.Level
 
             OnExtractionCancelled?.Invoke();
 
-            // UI 숨기기
-            if (UIManager.Instance != null)
-            {
-                UIManager.Instance.HideExtractionProgress();
-                UIManager.Instance.ShowMessage("탈출 취소됨");
-            }
-
-            Debug.Log("Extraction cancelled!");
+            // Debug.Log("Extraction cancelled!");
         }
 
         /// <summary>
@@ -140,7 +124,7 @@ namespace MiniExtractionShooter.Level
                 GameManager.Instance.ExtractionSuccess();
             }
 
-            Debug.Log("Extraction complete!");
+            // Debug.Log("Extraction complete!");
         }
 
         /// <summary>

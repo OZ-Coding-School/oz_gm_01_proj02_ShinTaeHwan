@@ -43,8 +43,12 @@ MonoBehaviour:
   moveSpeedModifier: 0.92
   soundRange: 32.4
   explosionDamageMultiplier: 1
-  fireSound: {fileID: 0}
-  reloadSound: {fileID: 0}
+  useLoopingFireSound: 0
+  fireSoundName: Pistol_Fire
+  reloadSoundName: Reload
+  emptySoundName: 
+  fireSound: {fileID: 8300000, guid: 4264b757aeaf440b69b44dd94edcfc2c, type: 3}
+  reloadSound: {fileID: 8300000, guid: 17468c8a4775e409caf8eebde797a11a, type: 3}
   emptySound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}
   bulletTrailPrefab: {fileID: 509282136741994303, guid: 98bc08b9a07f24a07832d7b8fb4d1226,

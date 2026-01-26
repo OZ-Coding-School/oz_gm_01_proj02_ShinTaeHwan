@@ -16,7 +16,6 @@ namespace MiniExtractionShooter.UI
         [Header("Progress")]
         [SerializeField] private Slider progressSlider;
         [SerializeField] private Image progressFill;
-        [SerializeField] private TextMeshProUGUI progressText;
         [SerializeField] private TextMeshProUGUI timerText;
 
         [Header("Status")]
@@ -34,15 +33,36 @@ namespace MiniExtractionShooter.UI
         private ExtractionZone currentZone;
         private bool isAnimating = false;
 
+        public static ExtractionUI Instance { get; private set; }
+
         private void Awake()
         {
-            CreateUIElementsIfMissing();
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else
+            {
+                Destroy(gameObject);
+                return;
+            }
         }
 
         private void Start()
         {
             Hide();
-            FindExtractionZone();
+            // FindExtractionZone(); // Deprecated: Zones will register themselves
+        }
+
+        public void RegisterZone(ExtractionZone zone)
+        {
+            if (zone != null)
+            {
+                zone.OnExtractionStarted += OnExtractionStarted;
+                zone.OnExtractionProgress += OnExtractionProgress;
+                zone.OnExtractionCancelled += OnExtractionCancelled;
+                zone.OnExtractionComplete += OnExtractionComplete;
+            }
         }
 
         private void Update()
@@ -108,11 +128,6 @@ namespace MiniExtractionShooter.UI
             if (progressSlider != null)
             {
                 progressSlider.value = progress;
-            }
-
-            if (progressText != null)
-            {
-                progressText.text = $"{progress * 100f:F0}%";
             }
 
             if (timerText != null)

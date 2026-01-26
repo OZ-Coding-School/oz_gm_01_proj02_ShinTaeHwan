@@ -7,13 +7,8 @@ namespace MiniExtractionShooter.Data
     [System.Serializable]
     public class LootEntry
     {
-        public string itemName;
-        public ItemType itemType;
-
-        [Header("Item Data Reference (하나만 선택)")]
-        public WeaponData weaponData;
-        public ArmorData armorData;
-        public AmmoData ammoData;
+        [Header("Item Data")]
+        public ItemData itemData;  // 모든 아이템 타입 통합 (Weapon, Armor, Ammo, Consumable 등)
 
         [Header("Amount")]
         public int minAmount = 1;
@@ -23,24 +18,21 @@ namespace MiniExtractionShooter.Data
         [Range(0f, 1f)]
         public float dropChance = 0.5f;
 
-        public Sprite icon;
+        // ItemData에서 자동으로 가져오는 프로퍼티들
+        public string ItemName => itemData?.itemName ?? "";
+        public ItemType ItemType => itemData?.itemType ?? ItemType.Valuable;
+        public Sprite Icon => itemData?.icon;
 
         /// <summary>
-        /// ItemData 가져오기 (통합 접근)
+        /// ItemData 가져오기
         /// </summary>
         public ItemData GetItemData()
         {
-            return weaponData as ItemData ?? armorData as ItemData ?? ammoData as ItemData;
+            return itemData;
         }
     }
 
-    public enum LootContainerType
-    {
-        General,    // 일반 상자
-        Medical,    // 의료 상자
-        Military,   // 군수 상자
-        Valuable    // 귀중품 상자
-    }
+
 
     /// <summary>
     /// Loot Table ScriptableObject - TDD 기반 루팅 테이블 데이터
@@ -48,9 +40,6 @@ namespace MiniExtractionShooter.Data
     [CreateAssetMenu(fileName = "NewLootTable", menuName = "MiniExtractionShooter/Loot Table Data")]
     public class LootTableData : ScriptableObject
     {
-        [Header("Container Info")]
-        public string containerName = "Loot Container";
-        public LootContainerType containerType = LootContainerType.General;
 
         [Header("Slot Settings")]
         [Tooltip("최소 아이템 슬롯 수")]
@@ -104,19 +93,14 @@ namespace MiniExtractionShooter.Data
         {
             LootEntry clone = new LootEntry
             {
-                itemName = original.itemName,
-                itemType = original.itemType,
-                weaponData = original.weaponData,
-                armorData = original.armorData,
-                ammoData = original.ammoData,
+                itemData = original.itemData,
                 minAmount = original.minAmount,
                 maxAmount = original.maxAmount,
-                dropChance = original.dropChance,
-                icon = original.icon
+                dropChance = original.dropChance
             };
 
             // 수량이 있는 아이템은 랜덤 수량 결정
-            if (clone.itemType == ItemType.Ammo || clone.itemType == ItemType.Health || clone.itemType == ItemType.Valuable)
+            if (clone.ItemType == ItemType.Ammo || clone.ItemType == ItemType.Health || clone.ItemType == ItemType.Valuable)
             {
                 clone.minAmount = Random.Range(original.minAmount, original.maxAmount + 1);
                 clone.maxAmount = clone.minAmount;

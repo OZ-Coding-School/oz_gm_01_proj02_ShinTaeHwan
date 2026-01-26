@@ -11,6 +11,7 @@ namespace MiniExtractionShooter.Data
         public InventorySaveData inventory = new InventorySaveData();
         public WeaponSaveData weapons = new WeaponSaveData();
         public StatisticsSaveData statistics = new StatisticsSaveData();
+        public QuickSlotSaveData quickSlots = new QuickSlotSaveData();
         public string saveTime;
     }
 
@@ -76,5 +77,14 @@ namespace MiniExtractionShooter.Data
         public int enemiesKilled;
         public int itemsLooted;
         public float playTime;
+    }
+
+    /// <summary>
+    /// 퀵슬롯 저장 데이터
+    /// </summary>
+    [System.Serializable]
+    public class QuickSlotSaveData
+    {
+        public List<string> slotItemNames = new List<string>();
     }
 }

@@ -21,6 +21,9 @@ namespace MiniExtractionShooter.UI.Inventory
         protected InventoryItem currentItem;
         protected InventoryUI inventoryUI;
         protected bool isRevealed = true; // 기본적으로 공개됨
+        
+        // 드래그용 컴포넌트
+        [SerializeField] protected DragItem dragItem;
 
         public InventoryItem CurrentItem => currentItem;
         public int SlotIndex => slotIndex;
@@ -35,7 +38,35 @@ namespace MiniExtractionShooter.UI.Inventory
             inventoryUI = ui;
             slotIndex = index;
             isRevealed = true;
+            
+            // DragItem 초기화
+            InitializeDragItem();
+            
             ClearSlot();
+        }
+
+        /// <summary>
+        /// DragItem 컴포넌트 초기화
+        /// </summary>
+        protected virtual void InitializeDragItem()
+        {
+            // DragItem이 설정되지 않았으면 자동으로 찾거나 생성
+            if (dragItem == null)
+            {
+                dragItem = GetComponentInChildren<DragItem>();
+            }
+            
+            // 자식에도 없으면 Icon 이미지에 추가
+            if (dragItem == null && iconImage != null)
+            {
+                dragItem = iconImage.gameObject.AddComponent<DragItem>();
+            }
+            
+            // DragItem 초기화 (슬롯 연결)
+            if (dragItem != null)
+            {
+                dragItem.Initialize(this);
+            }
         }
 
         public virtual void SetItem(InventoryItem item)

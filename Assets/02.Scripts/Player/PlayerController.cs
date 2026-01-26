@@ -34,10 +34,17 @@ namespace MiniExtractionShooter.Player
         private float armorSpeedReduction = 0f;
         // 무기에 의한 이동 속도 계수
         private float weaponSpeedModifier = 1f;
+        // 소모품 사용 중 이동 속도 계수
+        private float consumableSpeedModifier = 1f;
         private Camera mainCamera;
 
         // 현재 마우스가 가리키는 월드 위치
         private Vector3 currentAimPoint;
+
+        // Footsteps
+        [Header("Audio")]
+        [SerializeField] private float stepInterval = 0.5f;
+        private float nextStepTime;
 
         // Events
         public System.Action<bool> OnMovementStateChanged;
@@ -131,6 +138,13 @@ namespace MiniExtractionShooter.Player
             }
         }
 
+
+        [Header("Noise Settings")]
+        [SerializeField] private float runNoiseRange = 8f;
+        [SerializeField] private float rollNoiseRange = 5f;
+        [SerializeField] private float runNoiseInterval = 0.5f;
+        private float nextRunNoiseTime;
+
         private void ApplyMovement()
         {
             // 중력 적용
@@ -150,19 +164,118 @@ namespace MiniExtractionShooter.Player
                 }
             }
 
-            // 이동 속도 계산 (방어구 감소 + 무기 계수 적용)
+            // 이동 속도 계산 (방어구 감소 + 무기 계수 + 소모품 사용 계수 적용)
             float currentSpeed = IsRunning ? runSpeed : walkSpeed;
             currentSpeed *= (1f - armorSpeedReduction);
             currentSpeed *= weaponSpeedModifier; // 무기/ADS 속도 계수 적용
+            currentSpeed *= consumableSpeedModifier; // 소모품 사용 중 속도 계수 적용
 
             // 이동 적용
-            Vector3 move = moveDirection * currentSpeed * Time.deltaTime;
-            move.y = velocity.y * Time.deltaTime;
+            Vector3 move = Vector3.zero;
+
+            // 구르기 중이면 강제 이동 벡터 적용
+            if (isRollingMovement)
+            {
+                // 구르기 속도 적용 (감속 로직 없이 일정 속도 유지)
+                if (Time.time < rollEndTime)
+                {
+                    move = rollDirection * rollSpeed * Time.deltaTime;
+                    
+                    // 구르기 중에도 중력은 적용
+                    move.y = velocity.y * Time.deltaTime;
+                }
+                else
+                {
+                    isRollingMovement = false;
+                }
+            }
+            else
+            {
+                // 일반 이동
+                move = moveDirection * currentSpeed * Time.deltaTime;
+                move.y = velocity.y * Time.deltaTime;
+
+                // 달리기 소음 발생 주기적 체크
+                if (IsRunning && characterController.isGrounded)
+                {
+                    if (Time.time >= nextRunNoiseTime)
+                    {
+                        Managers.NoiseManager.MakeNoise(transform.position, runNoiseRange);
+                        nextRunNoiseTime = Time.time + runNoiseInterval;
+                    }
+                }
+            }
 
             characterController.Move(move);
 
+            // Audio Logic
+            HandleMovementSound();
+
             // 이동 상태 변경 이벤트
             OnMovementStateChanged?.Invoke(IsMoving);
+        }
+
+        // Roll Movement Variables
+        private bool isRollingMovement = false;
+        private Vector3 rollDirection;
+        private float rollSpeed;
+        private float rollEndTime;
+
+        public void StartRollMovement(Vector3 direction, float speed, float duration)
+        {
+            isRollingMovement = true;
+            rollDirection = direction.normalized;
+            rollSpeed = speed;
+            rollEndTime = Time.time + duration;
+            
+            // 구르기 시작 시 Y 속도 초기화 (점프 중 구르기 등 방지)
+            velocity.y = 0f;
+
+            // 구르기 소음 발생 (1회)
+            Managers.NoiseManager.MakeNoise(transform.position, rollNoiseRange);
+        }
+
+        private AudioSource runLoopSource;
+
+        private void HandleMovementSound()
+        {
+            // Grounded 상태에서만 소리 재생
+            if (!characterController.isGrounded)
+            {
+                StopRunLoop();
+                return;
+            }
+
+            if (IsMoving)
+            {
+                if (IsRunning)
+                {
+                    // 달리기: 루프 사운드 재생
+                    if (runLoopSource == null)
+                    {
+                        runLoopSource = Managers.SoundManager.Instance?.PlayLoopingSFX("PlayerRun", transform.position);
+                    }
+                }
+                else
+                {
+                    // 걷기: 사운드 없음 (요청사항)
+                    StopRunLoop();
+                }
+            }
+            else
+            {
+                // 정지
+                StopRunLoop();
+            }
+        }
+
+        private void StopRunLoop()
+        {
+            if (runLoopSource != null)
+            {
+                Managers.SoundManager.Instance?.StopLoopingSFX(runLoopSource);
+                runLoopSource = null;
+            }
         }
 
         private void HandleAiming()
@@ -197,7 +310,7 @@ namespace MiniExtractionShooter.Player
         /// </summary>
         public void SetCanMove(bool value)
         {
-            Debug.Log($"[PlayerController] SetCanMove called: {value}");
+            // Debug.Log($"[PlayerController] SetCanMove called: {value}");
             canMove = value;
             if (!canMove)
             {
@@ -230,6 +343,14 @@ namespace MiniExtractionShooter.Player
         }
 
         /// <summary>
+        /// 소모품 사용 중 속도 계수 설정
+        /// </summary>
+        public void SetConsumableSpeedModifier(float modifier)
+        {
+            consumableSpeedModifier = Mathf.Clamp01(modifier);
+        }
+
+        /// <summary>
         /// 강제 위치 이동 (스폰 등)
         /// </summary>
         public void Teleport(Vector3 position)
@@ -241,5 +362,11 @@ namespace MiniExtractionShooter.Player
 
         public bool CanMove => canMove;
         public bool CanRotate => canRotate;
+
+        private void OnDisable()
+        {
+            StopRunLoop();
+        }
     }
 }
+

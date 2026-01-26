@@ -104,6 +104,12 @@ namespace MiniExtractionShooter.Data
         public float explosionDamageMultiplier = 1f;
 
         [Header("Audio")]
+        public bool useLoopingFireSound = false; // 연발 사운드 사용 여부
+        public float minFireLoopDuration = 0.2f; // 최소 재생 시간
+        public string fireSoundName;
+        public string reloadSoundName;
+        public string emptySoundName;
+        // Legacy AudioClips (to be migrated)
         public AudioClip fireSound;
         public AudioClip reloadSound;
         public AudioClip emptySound;

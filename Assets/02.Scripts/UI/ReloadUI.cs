@@ -16,13 +16,7 @@ namespace MiniExtractionShooter.UI
         [SerializeField] private Image crosshairReloadCircle; // Radial filled image
         [SerializeField] private CanvasGroup crosshairCircleGroup;
 
-        [Header("Bottom Reload Bar")]
-        [SerializeField] private GameObject reloadBarContainer;
-        [SerializeField] private Image reloadBarFill; // Horizontal filled image
-        [SerializeField] private TextMeshProUGUI cancelPromptText;
-
         [Header("Settings")]
-        [SerializeField] private string cancelPromptFormat = "<color=#FFCC00>X</color> 동작 취소";
         [SerializeField] private float circleStartAngle = -90f; // Top = -90
 
         private bool isReloading = false;
@@ -169,11 +163,8 @@ namespace MiniExtractionShooter.UI
                 crosshairReloadCircle.fillAmount = progress;
             }
 
-            // 수평 바 업데이트
-            if (reloadBarFill != null)
-            {
-                reloadBarFill.fillAmount = progress;
-            }
+            // 공용 프로그레스 바 업데이트
+            ActionProgressUI.Instance?.UpdateProgress(progress);
         }
 
         /// <summary>
@@ -192,21 +183,8 @@ namespace MiniExtractionShooter.UI
                 crosshairReloadCircle.gameObject.SetActive(true);
             }
 
-            if (reloadBarContainer != null)
-            {
-                reloadBarContainer.SetActive(true);
-            }
-
-            if (reloadBarFill != null)
-            {
-                reloadBarFill.fillAmount = 0f;
-            }
-
-            if (cancelPromptText != null)
-            {
-                cancelPromptText.text = cancelPromptFormat;
-                cancelPromptText.gameObject.SetActive(true);
-            }
+            // 공용 프로그레스 바 표시
+            ActionProgressUI.Instance?.Show("재장전", true);
         }
 
         /// <summary>
@@ -224,15 +202,8 @@ namespace MiniExtractionShooter.UI
                 crosshairReloadCircle.gameObject.SetActive(false);
             }
 
-            if (reloadBarContainer != null)
-            {
-                reloadBarContainer.SetActive(false);
-            }
-
-            if (cancelPromptText != null)
-            {
-                cancelPromptText.gameObject.SetActive(false);
-            }
+            // 공용 프로그레스 바 숨기기
+            ActionProgressUI.Instance?.Hide();
         }
 
         /// <summary>

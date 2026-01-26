@@ -6,7 +6,8 @@ namespace MiniExtractionShooter.Level
     {
         Player,
         Enemy,
-        Loot
+        Loot,
+        Extraction  // 탈출구 스폰 포인트
     }
 
     /// <summary>
@@ -85,6 +86,7 @@ namespace MiniExtractionShooter.Level
                 SpawnPointType.Player => Color.blue,
                 SpawnPointType.Enemy => Color.red,
                 SpawnPointType.Loot => Color.yellow,
+                SpawnPointType.Extraction => Color.green,
                 _ => Color.white
             };
 
@@ -133,6 +135,7 @@ namespace MiniExtractionShooter.Level
                 SpawnPointType.Player => "PLAYER SPAWN",
                 SpawnPointType.Enemy => "ENEMY SPAWN",
                 SpawnPointType.Loot => "LOOT SPAWN",
+                SpawnPointType.Extraction => "EXTRACTION SPAWN",
                 _ => "SPAWN"
             };
 

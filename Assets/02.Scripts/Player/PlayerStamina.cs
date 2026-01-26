@@ -187,7 +187,7 @@ namespace MiniExtractionShooter.Player
             currentStamina = Mathf.Min(maxStamina, currentStamina + amount);
             OnStaminaChanged?.Invoke(currentStamina, maxStamina);
 
-            Debug.Log($"[PlayerStamina] Restored {amount:F0} stamina. Current: {currentStamina:F0}");
+            // Debug.Log($"[PlayerStamina] Restored {amount:F0} stamina. Current: {currentStamina:F0}");
         }
 
         /// <summary>

@@ -195,7 +195,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: e51cc7ebd2a88430f9a3fe00f37bc294,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -4.55
+      value: -5.624
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: e51cc7ebd2a88430f9a3fe00f37bc294,
         type: 3}
@@ -453,6 +453,18 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 7333096748877043714}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e51cc7ebd2a88430f9a3fe00f37bc294,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5281836544478921020}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e51cc7ebd2a88430f9a3fe00f37bc294,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 662065756395956790}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: e51cc7ebd2a88430f9a3fe00f37bc294,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2044625554756109453}
   m_SourcePrefab: {fileID: 100100000, guid: e51cc7ebd2a88430f9a3fe00f37bc294, type: 3}
 --- !u!4 &1597457580505611898 stripped
 Transform:
@@ -529,6 +541,7 @@ MonoBehaviour:
   rotationSpeed: 15
   canMove: 1
   canRotate: 1
+  stepInterval: 0.5
 --- !u!114 &754536318760076472
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -559,11 +572,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentArmor: {fileID: 0}
-  items: []
+  maxInventorySlots: 30
   pistolAmmoData: {fileID: 11400000, guid: 3971114e88bf14271acb3fd59fd7c807, type: 2}
   rifleAmmoData: {fileID: 11400000, guid: ed4631be22b074e1395a544bfc38cc20, type: 2}
   startingPistolAmmo: 60
-  maxInventorySlots: 30
 --- !u!114 &180743232520507333
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -580,8 +592,9 @@ MonoBehaviour:
   secondaryWeapon: {fileID: 11400000, guid: d7de78e0c58714dd7befd27453711c48, type: 2}
   currentSlot: 0
   activeWeapon: {fileID: 0}
+  primaryAmmo: -1
+  secondaryAmmo: -1
   weaponHolder: {fileID: 3019796306606343317}
-  availableWeapons: []
 --- !u!114 &8879668638725132163
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -595,6 +608,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lootRange: 2
+  interactionRange: 1.5
   lootableLayerMask:
     serializedVersion: 2
     m_Bits: 512
@@ -628,7 +642,61 @@ MonoBehaviour:
   playerController: {fileID: 0}
   playerCombat: {fileID: 0}
   rollCooldown: 1
-  rollDuration: 1
+  rollDuration: 0.7
+--- !u!114 &5281836544478921020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2116867300978779328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0571fa036f1cb437b986ab926c70bd94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxStamina: 100
+  currentStamina: 0
+  runDrainRate: 10
+  rollCost: 25
+  recoveryDelay: 2
+  recoveryRate: 30
+  infiniteStamina: 0
+--- !u!114 &662065756395956790
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2116867300978779328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2fde435f022b4bbdb150c78f2ad8a15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isUsingItem: 0
+  currentUseTimer: 0
+--- !u!114 &2044625554756109453
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2116867300978779328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b68930e1ba6374a5c9901262a1b5c793, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHydration: 100
+  currentHydration: 100
+  hydrationDecayRate: 1
+  staminaRegenPenalty: 0.5
+  maxEnergy: 100
+  currentEnergy: 100
+  energyDecayRate: 0.8
+  energyDepletionDamage: 2
+  enableDecay: 1
 --- !u!4 &4631914574563486969 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -3321919801592875672, guid: e51cc7ebd2a88430f9a3fe00f37bc294,

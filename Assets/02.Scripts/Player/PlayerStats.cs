@@ -113,7 +113,7 @@ namespace MiniExtractionShooter.Player
                 if (currentHydration <= 0)
                 {
                     OnHydrationDepleted?.Invoke();
-                    Debug.Log("[PlayerStats] Hydration depleted! Stamina regen reduced.");
+                    // Debug.Log("[PlayerStats] Hydration depleted! Stamina regen reduced.");
                 }
             }
 
@@ -126,7 +126,7 @@ namespace MiniExtractionShooter.Player
                 if (currentEnergy <= 0)
                 {
                     OnEnergyDepleted?.Invoke();
-                    Debug.Log("[PlayerStats] Energy depleted! HP will decrease.");
+                    // Debug.Log("[PlayerStats] Energy depleted! HP will decrease.");
                 }
             }
         }
@@ -155,7 +155,7 @@ namespace MiniExtractionShooter.Player
 
             OnHydrationChanged?.Invoke(currentHydration, maxHydration);
 
-            Debug.Log($"[PlayerStats] Hydration restored: {previousHydration:F1} -> {currentHydration:F1}");
+            // Debug.Log($"[PlayerStats] Hydration restored: {previousHydration:F1} -> {currentHydration:F1}");
         }
 
         /// <summary>
@@ -170,7 +170,7 @@ namespace MiniExtractionShooter.Player
 
             OnEnergyChanged?.Invoke(currentEnergy, maxEnergy);
 
-            Debug.Log($"[PlayerStats] Energy restored: {previousEnergy:F1} -> {currentEnergy:F1}");
+            // Debug.Log($"[PlayerStats] Energy restored: {previousEnergy:F1} -> {currentEnergy:F1}");
         }
 
         /// <summary>

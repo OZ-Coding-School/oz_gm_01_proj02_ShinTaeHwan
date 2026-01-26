@@ -3,12 +3,12 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 using MiniExtractionShooter.Player;
-using MiniExtractionShooter.Data;
 
 namespace MiniExtractionShooter.UI.Inventory
 {
     /// <summary>
-    /// 퀵슬롯 - 인벤토리 아이템을 등록하고 숫자키로 빠르게 사용
+    /// 퀵슬롯 UI 컴포넌트
+    /// UI 표시만 담당, 데이터는 QuickSlotManager가 관리
     /// </summary>
     public class QuickSlot : MonoBehaviour, IDropHandler, IPointerClickHandler
     {
@@ -26,45 +26,45 @@ namespace MiniExtractionShooter.UI.Inventory
         [SerializeField] private Color emptyBackgroundColor = new Color(0.2f, 0.2f, 0.24f, 0.7f);
         [SerializeField] private Color filledBackgroundColor = new Color(0.2f, 0.25f, 0.3f, 0.85f);
 
-        private InventoryItem linkedItem; // 연결된 인벤토리 아이템
-
         public int SlotIndex => slotIndex;
         public int KeyNumber => slotIndex + 3; // 슬롯 0 = 키 3
-        public InventoryItem LinkedItem => linkedItem;
-        public bool HasItem => linkedItem != null && linkedItem.itemData != null;
 
         private void Awake()
         {
-            // 슬롯 번호 표시 (3~8)
+            UpdateSlotNumber();
+            ClearUI();
+        }
+
+        /// <summary>
+        /// 슬롯 번호 텍스트 업데이트
+        /// </summary>
+        public void UpdateSlotNumber()
+        {
             if (slotNumberText != null)
             {
                 slotNumberText.text = KeyNumber.ToString();
             }
-
-            ClearSlot();
         }
 
         /// <summary>
-        /// 아이템 연결 (인벤토리에서 드래그)
+        /// 슬롯 인덱스 설정 (외부에서 호출)
         /// </summary>
-        public void SetLinkedItem(InventoryItem item)
+        public void SetSlotIndex(int index)
+        {
+            slotIndex = index;
+            UpdateSlotNumber();
+        }
+
+        /// <summary>
+        /// UI 업데이트 (QuickSlotManager에서 호출)
+        /// </summary>
+        public void UpdateUI(InventoryItem item)
         {
             if (item == null || item.itemData == null)
             {
-                ClearSlot();
+                ClearUI();
                 return;
             }
-
-            // 소모품/회복 아이템만 허용
-            if (item.ItemType != ItemType.Health && 
-                item.ItemType != ItemType.Valuable &&
-                item.ItemType != ItemType.Ammo)
-            {
-                Debug.Log($"[QuickSlot] Cannot add {item.ItemType} to quick slot. Only consumables allowed.");
-                return;
-            }
-
-            linkedItem = item;
 
             // 아이콘 표시
             if (iconImage != null)
@@ -82,7 +82,11 @@ namespace MiniExtractionShooter.UI.Inventory
             }
 
             // 수량 표시
-            UpdateAmount();
+            if (amountText != null)
+            {
+                amountText.text = item.amount.ToString();
+                amountText.gameObject.SetActive(true);
+            }
 
             // 배경색 변경
             if (backgroundImage != null)
@@ -92,45 +96,10 @@ namespace MiniExtractionShooter.UI.Inventory
         }
 
         /// <summary>
-        /// 수량 업데이트 (인벤토리 변경 시 호출)
+        /// UI 초기화 (빈 슬롯 상태)
         /// </summary>
-        public void UpdateAmount()
+        public void ClearUI()
         {
-            if (linkedItem == null || linkedItem.itemData == null)
-            {
-                ClearSlot();
-                return;
-            }
-
-            // 인벤토리에서 실제 수량 확인
-            if (PlayerInventory.Instance != null)
-            {
-                var inventoryItem = PlayerInventory.Instance.FindItem(linkedItem.itemData);
-                if (inventoryItem != null)
-                {
-                    linkedItem.amount = inventoryItem.amount;
-
-                    if (amountText != null)
-                    {
-                        amountText.text = linkedItem.amount.ToString();
-                        amountText.gameObject.SetActive(true);
-                    }
-                }
-                else
-                {
-                    // 인벤토리에 아이템이 없으면 슬롯 비우기
-                    ClearSlot();
-                }
-            }
-        }
-
-        /// <summary>
-        /// 슬롯 비우기
-        /// </summary>
-        public void ClearSlot()
-        {
-            linkedItem = null;
-
             if (iconImage != null)
             {
                 iconImage.sprite = null;
@@ -147,36 +116,6 @@ namespace MiniExtractionShooter.UI.Inventory
             {
                 backgroundImage.color = emptyBackgroundColor;
             }
-        }
-
-        /// <summary>
-        /// 아이템 사용
-        /// </summary>
-        public bool UseItem()
-        {
-            if (!HasItem)
-            {
-                Debug.Log($"[QuickSlot] Slot {KeyNumber} is empty.");
-                return false;
-            }
-
-            // 인벤토리에서 아이템 사용
-            if (PlayerInventory.Instance != null)
-            {
-                var inventoryItem = PlayerInventory.Instance.FindItem(linkedItem.itemData);
-                if (inventoryItem != null)
-                {
-                    bool success = PlayerInventory.Instance.UseItem(inventoryItem);
-                    if (success)
-                    {
-                        Debug.Log($"[QuickSlot] Used item: {linkedItem.ItemName}");
-                        UpdateAmount();
-                        return true;
-                    }
-                }
-            }
-
-            return false;
         }
 
         /// <summary>
@@ -203,27 +142,40 @@ namespace MiniExtractionShooter.UI.Inventory
 
         #region Event Handlers
 
+        /// <summary>
+        /// 인벤토리에서 드래그된 아이템 처리
+        /// </summary>
         public void OnDrop(PointerEventData eventData)
         {
-            // 인벤토리에서 드래그된 아이템 처리
             DragItem dragItem = eventData.pointerDrag?.GetComponent<DragItem>();
             if (dragItem != null && dragItem.OriginalSlot?.CurrentItem != null)
             {
-                SetLinkedItem(dragItem.OriginalSlot.CurrentItem);
+                var item = dragItem.OriginalSlot.CurrentItem;
+                
+                // Manager에 등록 요청
+                if (QuickSlotManager.Instance != null)
+                {
+                    QuickSlotManager.Instance.RegisterItem(slotIndex, item.itemData);
+                }
             }
         }
 
+        /// <summary>
+        /// 마우스 클릭 처리
+        /// </summary>
         public void OnPointerClick(PointerEventData eventData)
         {
-            // 우클릭으로 슬롯 비우기
+            if (QuickSlotManager.Instance == null) return;
+
+            // 우클릭: 슬롯 비우기
             if (eventData.button == PointerEventData.InputButton.Right)
             {
-                ClearSlot();
+                QuickSlotManager.Instance.ClearSlot(slotIndex);
             }
-            // 좌클릭으로 아이템 사용
+            // 좌클릭: 아이템 사용
             else if (eventData.button == PointerEventData.InputButton.Left)
             {
-                UseItem();
+                QuickSlotManager.Instance.UseSlot(slotIndex);
             }
         }
 

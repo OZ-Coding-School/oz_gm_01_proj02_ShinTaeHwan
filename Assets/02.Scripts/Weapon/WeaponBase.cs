@@ -57,6 +57,13 @@ namespace MiniExtractionShooter.Weapon
             {
                 spreadSystem = gameObject.AddComponent<SpreadSystem>();
             }
+
+            // LayerMask 초기화 (한 번만 실행)
+            if (!isLayerMaskInitialized)
+            {
+                IgnoreRaycastLayers = ~LayerMask.GetMask("Lootable", "Zone", "Ignore Raycast");
+                isLayerMaskInitialized = true;
+            }
         }
 
         private void Start()
@@ -89,6 +96,11 @@ namespace MiniExtractionShooter.Weapon
             {
                 consecutiveShots = 0;
             }
+        }
+
+        private void OnDisable()
+        {
+            StopFiringLoop();
         }
 
         /// <summary>
@@ -132,6 +144,7 @@ namespace MiniExtractionShooter.Weapon
             {
                 // 탄약 없음 - 재장전 필요
                 PlayEmptySound();
+                StopFiringLoop(); // 탄약 없으면 루프 즉시 중단
                 return false;
             }
 
@@ -161,6 +174,12 @@ namespace MiniExtractionShooter.Weapon
             // 이펙트
             PlayFireEffects();
 
+            // 소음 발생
+            if (weaponData != null)
+            {
+                Managers.NoiseManager.MakeNoise(transform.position, weaponData.soundRange);
+            }
+
             OnFired?.Invoke();
             NotifyAmmoChanged();
 
@@ -170,6 +189,11 @@ namespace MiniExtractionShooter.Weapon
                 TryReload();
             }
         }
+
+        // 무기 레이캐스트가 무시할 레이어 (LootBox, ExtractionZone 등)
+        // Unity에서 "Lootable", "Zone" 레이어를 생성하고 해당 오브젝트에 적용 필요
+        private static int IgnoreRaycastLayers = -1;
+        private static bool isLayerMaskInitialized = false;
 
         /// <summary>
         /// 레이캐스트로 피격 처리
@@ -195,7 +219,8 @@ namespace MiniExtractionShooter.Weapon
 
             Vector3 endPoint = origin + direction * weaponData.maxRange;
 
-            if (Physics.Raycast(origin, direction, out RaycastHit hit, weaponData.maxRange))
+            // LayerMask를 사용하여 Interactable, Zone 레이어 무시
+            if (Physics.Raycast(origin, direction, out RaycastHit hit, weaponData.maxRange, IgnoreRaycastLayers))
             {
                 endPoint = hit.point;
 
@@ -288,6 +313,8 @@ namespace MiniExtractionShooter.Weapon
             isReloading = false;
             OnReloadCancelled?.Invoke();
             OnReloadProgress?.Invoke(0f);
+            
+            StopFiringLoop();
         }
 
         /// <summary>
@@ -299,7 +326,12 @@ namespace MiniExtractionShooter.Weapon
             OnReloadStart?.Invoke();
 
             // 재장전 사운드
-            if (weaponData.reloadSound != null)
+            if (!string.IsNullOrEmpty(weaponData.reloadSoundName))
+            {
+                Managers.SoundManager.Instance?.PlaySFX(weaponData.reloadSoundName, transform.position);
+            }
+            // Fallback for verification if name is missing but clip exists (optional, or just remove)
+            else if (weaponData.reloadSound != null)
             {
                 AudioSource.PlayClipAtPoint(weaponData.reloadSound, transform.position);
             }
@@ -344,15 +376,83 @@ namespace MiniExtractionShooter.Weapon
             NotifyAmmoChanged();
         }
 
+        private AudioSource fireLoopSource;
+        private float fireLoopStartTime;
+        private Coroutine stopLoopCoroutine;
+
+        public void StartFiringLoop()
+        {
+            if (weaponData != null && weaponData.useLoopingFireSound)
+            {
+                // 탄약이 없거나 재장전 중이면 재생하지 않음
+                if (magazineAmmo <= 0 || isReloading) return;
+
+                if (fireLoopSource == null && !string.IsNullOrEmpty(weaponData.fireSoundName))
+                {
+                    if (stopLoopCoroutine != null)
+                    {
+                        StopCoroutine(stopLoopCoroutine);
+                        stopLoopCoroutine = null;
+                    }
+
+                    fireLoopSource = Managers.SoundManager.Instance?.PlayLoopingSFX(weaponData.fireSoundName, transform.position);
+                    fireLoopStartTime = Time.time;
+                }
+            }
+        }
+
+        public void StopFiringLoop()
+        {
+            if (fireLoopSource != null)
+            {
+                float elapsedTime = Time.time - fireLoopStartTime;
+                if (elapsedTime < weaponData.minFireLoopDuration)
+                {
+                    float delay = weaponData.minFireLoopDuration - elapsedTime;
+                    if (stopLoopCoroutine == null)
+                    {
+                        stopLoopCoroutine = StartCoroutine(DelayedStopLoop(delay));
+                    }
+                }
+                else
+                {
+                    InternalStopLoop();
+                }
+            }
+        }
+
+        private System.Collections.IEnumerator DelayedStopLoop(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            InternalStopLoop();
+            stopLoopCoroutine = null;
+        }
+
+        private void InternalStopLoop()
+        {
+            if (fireLoopSource != null)
+            {
+                Managers.SoundManager.Instance?.StopLoopingSFX(fireLoopSource);
+                fireLoopSource = null;
+            }
+        }
+
         /// <summary>
         /// 발사 이펙트
         /// </summary>
         private void PlayFireEffects()
         {
-            // 발사 사운드
-            if (weaponData.fireSound != null)
+            // 발사 사운드 (루핑이 아닐 때만 원샷 재생)
+            if (!weaponData.useLoopingFireSound)
             {
-                AudioSource.PlayClipAtPoint(weaponData.fireSound, transform.position);
+                if (!string.IsNullOrEmpty(weaponData.fireSoundName))
+                {
+                    Managers.SoundManager.Instance?.PlaySFX(weaponData.fireSoundName, transform.position);
+                }
+                else if (weaponData.fireSound != null)
+                {
+                    AudioSource.PlayClipAtPoint(weaponData.fireSound, transform.position);
+                }
             }
 
             // 머즐 플래시
@@ -373,7 +473,11 @@ namespace MiniExtractionShooter.Weapon
         /// </summary>
         private void PlayEmptySound()
         {
-            if (weaponData.emptySound != null)
+            if (!string.IsNullOrEmpty(weaponData.emptySoundName))
+            {
+                Managers.SoundManager.Instance?.PlaySFX(weaponData.emptySoundName, transform.position);
+            }
+            else if (weaponData.emptySound != null)
             {
                 AudioSource.PlayClipAtPoint(weaponData.emptySound, transform.position);
             }

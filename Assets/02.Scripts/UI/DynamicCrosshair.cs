@@ -178,7 +178,8 @@ namespace MiniExtractionShooter.UI
                 centerDot.gameObject.SetActive(showCenterDot);
             }
 
-            SetColor(normalColor);
+            if (normalColor != null)
+                SetColor(normalColor);
         }
 
         /// <summary>

@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using MiniExtractionShooter.Core;
 using MiniExtractionShooter.Player;
 using MiniExtractionShooter.Level;
+using MiniExtractionShooter.UI;
 using System.Collections.Generic;
 
 namespace MiniExtractionShooter.Managers
@@ -26,7 +27,6 @@ namespace MiniExtractionShooter.Managers
 
         [Header("Spawn Points")]
         [SerializeField] private SpawnPoint playerSpawnPoint;
-        [SerializeField] private List<SpawnPoint> enemySpawnPoints = new List<SpawnPoint>();
 
         [Header("Statistics")]
         [SerializeField] private int enemiesKilled = 0;
@@ -52,7 +52,7 @@ namespace MiniExtractionShooter.Managers
         protected override void Awake()
         {
             base.Awake();
-            dontDestroyOnLoad = true;
+            // 씬별 GameManager - DontDestroyOnLoad 사용 안 함
         }
 
         private void OnEnable()
@@ -71,6 +71,19 @@ namespace MiniExtractionShooter.Managers
             if (PlayerHealth.Instance != null)
             {
                 PlayerHealth.Instance.OnDeath += HandlePlayerDeath;
+            }
+
+            string sceneName = SceneManager.GetActiveScene().name;
+            if (sceneName == "HomeScene")
+            {
+                SoundManager.Instance?.PlayBGM("HomeBGM");
+            }
+
+            // HomeScene 또는 GameScene이면 자동으로 게임 시작 (데이터 로드)
+            
+            if (sceneName == "HomeScene" || sceneName == "Map_v1")
+            {
+                StartGame();
             }
         }
 
@@ -110,10 +123,16 @@ namespace MiniExtractionShooter.Managers
         {
             SetState(GameState.Playing);
 
-            // 통계 초기화
-            enemiesKilled = 0;
-            itemsLooted = 0;
-            playTime = 0f;
+            // 저장된 게임 로드 시도
+            bool loaded = SaveDataManager.Instance?.LoadGame() ?? false;
+
+            if (!loaded)
+            {
+                // 통계 초기화 (새 게임인 경우만)
+                enemiesKilled = 0;
+                itemsLooted = 0;
+                playTime = 0f;
+            }
 
             // 플레이어 스폰
             SpawnPlayer();
@@ -123,7 +142,7 @@ namespace MiniExtractionShooter.Managers
 
             OnGameStarted?.Invoke();
 
-            Debug.Log("Game Started!");
+            // Debug.Log(loaded ? "Game loaded from save!" : "New game started!");
         }
 
         /// <summary>
@@ -165,12 +184,12 @@ namespace MiniExtractionShooter.Managers
             OnGamePaused?.Invoke();
 
             // UI 표시
-            if (UIManager.Instance != null)
+            if (PauseMenuUI.Instance != null)
             {
-                UIManager.Instance.ShowPauseMenu();
+                PauseMenuUI.Instance.Show();
             }
 
-            Debug.Log("Game Paused!");
+            // Debug.Log("Game Paused!");
         }
 
         /// <summary>
@@ -186,12 +205,12 @@ namespace MiniExtractionShooter.Managers
             OnGameResumed?.Invoke();
 
             // UI 숨기기
-            if (UIManager.Instance != null)
+            if (PauseMenuUI.Instance != null)
             {
-                UIManager.Instance.HidePauseMenu();
+                PauseMenuUI.Instance.Hide();
             }
 
-            Debug.Log("Game Resumed!");
+            // Debug.Log("Game Resumed!");
         }
 
         /// <summary>
@@ -205,12 +224,12 @@ namespace MiniExtractionShooter.Managers
             OnGameOver?.Invoke();
 
             // UI 표시
-            if (UIManager.Instance != null)
+            if (DeathScreenUI.Instance != null)
             {
-                UIManager.Instance.ShowGameOverScreen(false);
+                DeathScreenUI.Instance.Show();
             }
 
-            Debug.Log("Game Over!");
+            // Debug.Log("Game Over!");
         }
 
         /// <summary>
@@ -219,20 +238,32 @@ namespace MiniExtractionShooter.Managers
         public void ExtractionSuccess()
         {
             SetState(GameState.Victory);
-            Time.timeScale = 0f;
 
             // 성공 시 저장
             SaveDataManager.Instance?.SaveGame();
 
             OnVictory?.Invoke();
 
-            // UI 표시
-            if (UIManager.Instance != null)
-            {
-                UIManager.Instance.ShowGameOverScreen(true);
-            }
+            // Debug.Log("Extraction Success! Moving to HomeScene...");
 
-            Debug.Log("Extraction Success!");
+            // HomeScene으로 이동
+            Time.timeScale = 1f;
+            SceneManager.LoadScene("HomeScene");
+        }
+
+        /// <summary>
+        /// 출발 (HomeScene -> GameScene)
+        /// </summary>
+        public void DeployToGame()
+        {
+            // 출발 전 저장
+            SaveDataManager.Instance?.SaveGame();
+
+            // Debug.Log("Deploying to Game! Moving to Map_v1...");
+
+            // GameScene으로 이동
+            Time.timeScale = 1f;
+            SceneManager.LoadScene("Map_v1");
         }
 
         /// <summary>

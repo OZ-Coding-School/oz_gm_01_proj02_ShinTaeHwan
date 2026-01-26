@@ -41,9 +41,7 @@ namespace MiniExtractionShooter.Loot
         public static LootItem FromLootEntry(LootEntry entry)
         {
             // LootEntry에서 ItemData 추출
-            ItemData itemData = entry.weaponData as ItemData 
-                             ?? entry.armorData as ItemData 
-                             ?? entry.ammoData as ItemData;
+            ItemData itemData = entry.GetItemData();
 
             int amount = Random.Range(entry.minAmount, entry.maxAmount + 1);
 

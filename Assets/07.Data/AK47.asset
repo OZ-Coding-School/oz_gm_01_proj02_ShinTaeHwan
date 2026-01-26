@@ -12,22 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7abd308fca3b4950aa19fc4c8ae4e16, type: 3}
   m_Name: AK47
   m_EditorClassIdentifier: 
-  itemName: New Item
+  itemName: AK47
   itemType: 0
   icon: {fileID: 21300000, guid: 9821d8cafbfd44d8e81e57174a152ed6, type: 3}
   isStackable: 0
   maxStackSize: 1
   description: "AK47\uC774\uB2E4"
-  weaponType: 0
-  ammoType: 0
+  weaponType: 1
+  ammoType: 1
   weaponPrefab: {fileID: 699984860642453494, guid: 1112cbe0022cf4b2e8c3d59e9d95143a,
     type: 3}
   weight: 4.3
   caliber: AR
   baseDamage: 16
   critMultiplier: 1.45
-  fireRate: 10
-  magazineSize: 30000000
+  fireRate: 5
+  magazineSize: 30
   reloadTime: 3
   muzzleVelocity: 118
   effectiveRange: 23
@@ -43,8 +43,13 @@ MonoBehaviour:
   moveSpeedModifier: 0.85
   soundRange: 27.2
   explosionDamageMultiplier: 1
-  fireSound: {fileID: 0}
-  reloadSound: {fileID: 0}
+  useLoopingFireSound: 1
+  minFireLoopDuration: 0.2
+  fireSoundName: AK47_Fire_Loop
+  reloadSoundName: Reload
+  emptySoundName: 
+  fireSound: {fileID: 8300000, guid: 2794c2521c9034251b88115a57e61772, type: 3}
+  reloadSound: {fileID: 8300000, guid: 17468c8a4775e409caf8eebde797a11a, type: 3}
   emptySound: {fileID: 0}
   muzzleFlashPrefab: {fileID: 0}
   bulletTrailPrefab: {fileID: 509282136741994303, guid: 98bc08b9a07f24a07832d7b8fb4d1226,

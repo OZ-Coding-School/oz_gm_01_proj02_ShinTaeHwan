@@ -34,10 +34,20 @@ namespace MiniExtractionShooter.Level
         [SerializeField] private float shakeIntensity = 0.1f;
         [SerializeField] private float shakeDuration = 0.1f;
 
+        [Header("Top-Down Toggle")]
+        [SerializeField] private KeyCode topDownToggleKey = KeyCode.Y;
+        [SerializeField] private Vector3 topDownOffset = new Vector3(0, 15, 0);
+        [SerializeField] private Vector3 topDownRotation = new Vector3(90, 0, 0);
+        [SerializeField] private float viewTransitionSpeed = 3f;
+
         private Vector3 velocity = Vector3.zero;
         private float currentShakeDuration = 0f;
         private Vector3 currentMouseOffset = Vector3.zero;
         private Camera cam;
+        private bool isTopDownMode = false;
+        private Vector3 originalOffset;
+        private Quaternion originalRotation;
+        private Quaternion targetRotation;
 
         private void Start()
         {
@@ -62,11 +72,25 @@ namespace MiniExtractionShooter.Level
             {
                 transform.position = target.position + offset;
             }
+
+            // 원래 오프셋과 회전값 저장
+            originalOffset = offset;
+            originalRotation = transform.rotation;
+            targetRotation = originalRotation;
         }
 
         private void LateUpdate()
         {
             if (target == null) return;
+
+            // Y키 토글 입력 처리
+            if (Input.GetKeyDown(topDownToggleKey))
+            {
+                ToggleTopDownView();
+            }
+
+            // 회전 보간 적용
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, viewTransitionSpeed * Time.deltaTime);
 
             // 마우스 오프셋 계산 및 적용
             Vector3 targetMouseOffset = CalculateMouseOffset();
@@ -217,6 +241,25 @@ namespace MiniExtractionShooter.Level
             if (!enabled)
             {
                 currentMouseOffset = Vector3.zero;
+            }
+        }
+
+        /// <summary>
+        /// 탑다운 뷰 토글
+        /// </summary>
+        public void ToggleTopDownView()
+        {
+            isTopDownMode = !isTopDownMode;
+
+            if (isTopDownMode)
+            {
+                offset = topDownOffset;
+                targetRotation = Quaternion.Euler(topDownRotation);
+            }
+            else
+            {
+                offset = originalOffset;
+                targetRotation = originalRotation;
             }
         }
     }

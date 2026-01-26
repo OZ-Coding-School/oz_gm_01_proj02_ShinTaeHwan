@@ -11,6 +11,7 @@ namespace MiniExtractionShooter.Data
         Ammo,
         Armor,
         Health,
+        Food,
         Valuable
     }
 

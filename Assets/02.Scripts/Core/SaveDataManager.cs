@@ -4,6 +4,7 @@ using MiniExtractionShooter.Data;
 using MiniExtractionShooter.Player;
 using MiniExtractionShooter.Weapon;
 using MiniExtractionShooter.Managers;
+using MiniExtractionShooter.UI.Inventory;
 
 namespace MiniExtractionShooter.Core
 {
@@ -75,6 +76,12 @@ namespace MiniExtractionShooter.Core
                     saveData.statistics = GetStatisticsSaveData();
                 }
 
+                // 퀵슬롯 데이터 수집
+                if (QuickSlotManager.Instance != null)
+                {
+                    saveData.quickSlots.slotItemNames = QuickSlotManager.Instance.GetSaveData();
+                }
+
                 // 저장 시간
                 saveData.saveTime = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -99,18 +106,19 @@ namespace MiniExtractionShooter.Core
         /// </summary>
         public bool LoadGame()
         {
+            // Debug.Log($"[SaveDataManager] LoadGame 호출됨. 저장 파일 경로: {SaveFilePath}");
+
             if (!HasSaveFile())
             {
-                if (debugMode)
-                {
-                    Debug.Log("[SaveDataManager] No save file found.");
-                }
+                // Debug.Log("[SaveDataManager] 저장 파일 없음.");
                 return false;
             }
 
             try
             {
                 string json = File.ReadAllText(SaveFilePath);
+                // Debug.Log($"[SaveDataManager] JSON 로드됨: {json}");
+
                 GameSaveData saveData = JsonUtility.FromJson<GameSaveData>(json);
 
                 if (saveData == null)
@@ -119,9 +127,13 @@ namespace MiniExtractionShooter.Core
                     return false;
                 }
 
+                // Debug.Log($"[SaveDataManager] 저장된 아이템 수: {saveData.inventory?.items?.Count ?? 0}");
+                // Debug.Log($"[SaveDataManager] 저장된 퀵슬롯: {string.Join(", ", saveData.quickSlots?.slotItemNames ?? new System.Collections.Generic.List<string>())}");
+
                 // 인벤토리 복원
                 if (PlayerInventory.Instance != null && saveData.inventory != null)
                 {
+                    // Debug.Log("[SaveDataManager] 인벤토리 복원 시작");
                     LoadInventoryData(saveData.inventory);
                 }
 
@@ -131,13 +143,14 @@ namespace MiniExtractionShooter.Core
                     LoadWeaponData(saveData.weapons);
                 }
 
-                // 통계는 GameManager에서 별도 관리
-
-                if (debugMode)
+                // 퀵슬롯 복원
+                if (QuickSlotManager.Instance != null && saveData.quickSlots != null)
                 {
-                    Debug.Log($"[SaveDataManager] Game loaded from: {SaveFilePath}");
-                    Debug.Log($"[SaveDataManager] Save time: {saveData.saveTime}");
+                    // Debug.Log("[SaveDataManager] 퀵슬롯 복원 시작");
+                    QuickSlotManager.Instance.LoadData(saveData.quickSlots.slotItemNames);
                 }
+
+                // Debug.Log($"[SaveDataManager] 게임 로드 완료. 저장 시간: {saveData.saveTime}");
 
                 return true;
             }
@@ -212,6 +225,7 @@ namespace MiniExtractionShooter.Core
 
         private void LoadInventoryData(InventorySaveData data)
         {
+            // Debug.Log($"[SaveDataManager] LoadInventoryData 시작 - 탄약: Pistol={data.pistolAmmo}, Rifle={data.rifleAmmo}, 아이템 수={data.items?.Count ?? 0}");
             PlayerInventory inv = PlayerInventory.Instance;
 
             // 탄약 설정
@@ -229,11 +243,14 @@ namespace MiniExtractionShooter.Core
             }
 
             // 아이템 복원
+            // Debug.Log($"[SaveDataManager] 인벤토리 클리어 후 아이템 복원 시작. 복원할 아이템 수: {data.items?.Count ?? 0}");
             inv.ClearItems();
             foreach (var itemData in data.items)
             {
+                // Debug.Log($"[SaveDataManager] 아이템 복원 시도: {itemData.itemName} x{itemData.amount}");
                 inv.AddItemFromSaveData(itemData);
             }
+            // Debug.Log($"[SaveDataManager] LoadInventoryData 완료. 현재 인벤토리 아이템 수: {inv.Items.Count}");
         }
 
         private void LoadWeaponData(WeaponSaveData data)
@@ -267,24 +284,12 @@ namespace MiniExtractionShooter.Core
 
         #region Resource Lookup
 
-        [Header("Resources")]
-        [SerializeField] private ArmorData[] availableArmors;
-
         /// <summary>
-        /// 이름으로 방어구 찾기
+        /// 이름으로 방어구 찾기 (ItemDatabase 사용)
         /// </summary>
         private ArmorData FindArmorByName(string name)
         {
-            if (availableArmors == null) return null;
-
-            foreach (var armor in availableArmors)
-            {
-                if (armor != null && armor.itemName == name)
-                {
-                    return armor;
-                }
-            }
-            return null;
+            return ItemDatabase.Instance.GetItemByName(name) as ArmorData;
         }
 
         #endregion

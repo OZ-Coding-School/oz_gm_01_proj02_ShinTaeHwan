@@ -173,11 +173,27 @@ namespace MiniExtractionShooter.Player
             // 애니메이션 트리거
             animator.SetTrigger(DoRollHash);
             
+            // 구르기 방향 계산 (이동 중이면 이동 방향, 아니면 전방)
+            Vector3 rollDir = transform.forward;
+            if (playerController != null && playerController.MoveDirection.magnitude > 0.1f)
+            {
+                rollDir = playerController.MoveDirection.normalized;
+                
+                // 구르기 방향으로 회전 맞춤
+                transform.rotation = Quaternion.LookRotation(rollDir);
+            }
+
+            // 구르기 이동 시작 (속도: RunSpeed * 1.5)
+            float rollSpeed = (playerController != null) ? playerController.CurrentSpeed * 1.5f : 10f;
+            playerController?.StartRollMovement(rollDir, rollSpeed, rollDuration);
+
             // 구르기 중 이동/사격 비활성화
             playerController?.SetCanMove(false);
             playerController?.SetCanRotate(false);
             playerCombat?.SetCanShoot(false);
             
+            Managers.SoundManager.Instance?.PlaySFX("PlayerRoll", transform.position);
+
             OnRollStart?.Invoke();
             
             // 구르기 종료 예약

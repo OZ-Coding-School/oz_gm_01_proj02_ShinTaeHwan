@@ -80,6 +80,8 @@ namespace MiniExtractionShooter.Player
             OnDamageTaken?.Invoke(actualDamage);
             OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
+            Managers.SoundManager.Instance?.PlaySFX("PlayerHit", transform.position);
+
             UpdateHealthState();
 
             if (currentHealth <= 0)
@@ -158,7 +160,9 @@ namespace MiniExtractionShooter.Player
                 PlayerController.Instance.SetCanRotate(false);
             }
 
-            Debug.Log("Player Died!");
+            Managers.SoundManager.Instance?.PlaySFX("PlayerDie", transform.position);
+
+            // Debug.Log("Player Died!");
         }
 
         /// <summary>

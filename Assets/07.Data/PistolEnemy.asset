@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd5d7ceec98044b95bb10940106ee824, type: 3}
+  m_Name: PistolEnemy
+  m_EditorClassIdentifier: 
+  enemyName: Guard
+  health: 80
+  moveSpeed: 3.5
+  detectionRange: 10
+  detectionAngle: 120
+  attackRange: 8
+  accuracy: 0.8
+  reactionTime: 0.7
+  attackInterval: 1
+  equippedWeapon: {fileID: 11400000, guid: d7de78e0c58714dd7befd27453711c48, type: 2}
+  minAmmo: 12
+  maxAmmo: 34
+  patrolWaitTime: 2
+  lootTable: {fileID: 11400000, guid: e993e956b6c2947778a3f13475cfe828, type: 2}
+  deathEffectPrefab: {fileID: 0}

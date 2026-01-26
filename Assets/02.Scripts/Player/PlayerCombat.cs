@@ -66,6 +66,16 @@ namespace MiniExtractionShooter.Player
 
         private void HandleFireInput()
         {
+            // 루핑 사운드 시작/종료 처리
+            if (Input.GetMouseButtonDown(0))
+            {
+                weaponManager?.ActiveWeapon?.StartFiringLoop();
+            }
+            if (Input.GetMouseButtonUp(0))
+            {
+                weaponManager?.ActiveWeapon?.StopFiringLoop();
+            }
+
             // 좌클릭 - 발사
             if (Input.GetMouseButton(0))
             {

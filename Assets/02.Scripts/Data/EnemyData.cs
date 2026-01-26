@@ -53,7 +53,24 @@ namespace MiniExtractionShooter.Data
         [Tooltip("순찰 시 대기 시간")]
         public float patrolWaitTime = 2f;
 
+        [Header("Loot")]
+        [Tooltip("사망 시 드랍할 루트테이블")]
+        public LootTableData lootTable;
+
+        [Header("Investigation")]
+        [Tooltip("조사 모드에서의 이동 속도 (Guard: 2.0)")]
+        public float investigationSpeed = 2.0f;
+
+        [Tooltip("조사 모드에서의 감지 범위 배율 (기본 감지 범위 * 배율)")]
+        public float investigationDetectionMultiplier = 1.5f;
+
+        [Tooltip("조사 지점 도착 후 대기 시간")]
+        public float investigationWaitTime = 3.0f;
+
         [Header("Visual")]
+        [Tooltip("사망 시 재생할 사운드 이름")]
+        public string deathSoundName = "EnemyDie";
+
         public GameObject deathEffectPrefab;
 
         /// <summary>
